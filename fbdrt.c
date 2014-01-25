@@ -5,24 +5,24 @@
 #include "fbdrt.h"
 
 // -----------------------------------------------------------------------------
-// Функции FBDgetProc() и FBDsetProc() должны быть реализованы в основной программе
+// FBDgetProc() and FBDsetProc() - callback, must be present in main program
 // -----------------------------------------------------------------------------
-// FBDgetProc(): чтение входного сигнала, переменной или EEPROM
-// type - тип читаемого сигнала
-//  0 - входной сигнал контроллера
-//  1 - входная переменная контроллера
-//  2 - содержимое EEPROM
-// index - номер (адрес) читаемого сигнала
-// результат функции - значение прочитанного сигнала
+// FBDgetProc(): reading input signal, network variable or eeprom
+// type - type of reading
+//  0 - input signal of MCU
+//  1 - input variable
+//  2 - EEPROM value
+// index - number (index) of reading signal
+// function result - signal value
 extern tSignal FBDgetProc(char type, tSignal index);
 
-// FBDsetProc() запись выходного сигнала, переменной или EEPROM
-// type - тип читаемого сигнала
-//  0 - выходной сигнал контроллера
-//  1 - выходная переменная контроллера
-//  2 - содержимое EEPROM
-// index - номер (адрес) читаемого сигнала
-// value - указатель на записываемое значение
+// FBDsetProc() writing output signal, variable or eeprom
+// type - type of writing
+//  0 - output signal of MCU
+//  1 - output variable
+//  2 - write to EEPROM
+// index - number (index) of writing signal
+// value - pointer to writing value
 extern void FBDsetProc(char type, tSignal index, tSignal *value);
 // -----------------------------------------------------------------------------
 
@@ -31,10 +31,10 @@ tSignal fbdGetParameter(tElemIndex element);
 tSignal fbdGetStorage(tElemIndex element, unsigned char index);
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
 
-// элемент стека вычислений
+// stack calculating item
 typedef struct {
-    tElemIndex index;               // индекс элемента
-    unsigned char input;            // номер его входа
+    tElemIndex index;               // index of element
+    unsigned char input;            // input number
 } tFBDStackItem;
 
 void setCalcFlag(tElemIndex element);
@@ -46,39 +46,39 @@ char getRiseFlag(tElemIndex element);
 tSignal intAbs(tSignal val);
 
 // ----------------------------------------------------------
-// массив описания схемы (может быть в ROM или RAM)
+// scheme description array (at ROM or RAM)
 DESCR_MEM unsigned char *fbdDescrBuf;
-// формат данных:
-//  TypeElement1          <- типы элементов
+// data format:
+//  TypeElement1          <- elements types
 //  TypeElement2
 //  ...
 //  TypeElementN
-//  -1                    <- признак окончания элементов
-// описания входов
+//  -1                    <- end flag
+// elements input descriptions
 DESCR_MEM tElemIndex *fbdInputsBuf;
-//  InputOfElement        <- входы элементов
+//  InputOfElement        <- elements inputs
 //  InputOfElement
 //  ..
-// описания параметров
+// parameters description
 DESCR_MEM tSignal *fbdParametersBuf;
-//  ParameterOfElement    <- параметры элементов
+//  ParameterOfElement    <- parameter of element
 //  ParameterOfElement
 //  ...
 // ----------------------------------------------------------
-// массив промежуточных данных (только RAM)
+// calculating data array (only RAM)
 tSignal *fbdMemoryBuf;
-// формат данных:
+// data format:
 //  OutputValue0
 //  OutputValue1
 //  ...
 //  OutputValueN
-// хранимые значения
+// saving values
 tSignal *fbdStorageBuf;
 //  Storage0
 //  Storage1
 //  ...
 //  StorageN
-// флаги расчета и фронта
+// flags (calculated and signal rising)
 char *fbdFlagsBuf;
 //  Flags0
 //  Flags1
@@ -91,11 +91,11 @@ tElemIndex fbdFlagsByteCount;
 //
 char fbdFirstFlag;
 
-// количество входов у элементов
+// inputs element count
 ROM_CONST unsigned char FBDInputsCount[19] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3};
-// количество параметров у элементов
+// parameters element count
 ROM_CONST unsigned char FBDParametersCount[19] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0};
-// количество хранимых значений у элементов
+// saved values count
 ROM_CONST unsigned char FBDStorageCount[19]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1};
 
 // --------------------------------------------------------------------------------------------
@@ -119,9 +119,9 @@ int fbdInit(DESCR_MEM unsigned char *buf)
         fbdStorageCount += FBDStorageCount[elem];
         fbdElementsCount++;
     }
-    // проверка правильности размеров сигнала и индекса
+    // check tSignal size
     if(elem != END_MARK) return -2;
-    // расчет указателей
+    // calc pointers
     fbdInputsBuf = (DESCR_MEM tElemIndex *)(fbdDescrBuf+fbdElementsCount+1);
     fbdParametersBuf = (DESCR_MEM tSignal *)(fbdInputsBuf+inputs);
     //
