@@ -1,7 +1,9 @@
 fbd-free
 ========
 
-run-time FBD library for microcontrollers
+run-time FBD library for PLC (Programmable logic controller).
+
+About FBD: http://en.wikipedia.org/wiki/Function_block_diagram
 
 FBD editor can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2.zip
 
