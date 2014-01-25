@@ -6,35 +6,35 @@
 
 // #define FBD_DEBUG
 
-// = Начало настройки ==========================================================
-// глубина стека для расчетов, один элемент занимает (sizeof(tElemIndex)+1) байт
+// = begin tuning ==========================================================
+// stack size fo calculating, one stack element size =(sizeof(tElemIndex)+1) байт
 #define FBDSTACKSIZE 32
-// тип данных, используемый для хранения указателя стека
+// data type for stack pointer
 typedef unsigned char tFBDStackPnt;
-// тип, используемый для хранения сигнала схемы
+// data type for FBD signal
 typedef int16_t tSignal;
 #define MAX_SIGNAL INT16_MAX
 #define MIN_SIGNAL INT16_MIN
-// тип, используемый для хранения индексов элементов
+// data type for element index
 typedef uint8_t tElemIndex;
 //
-// таблицы в ROM
+// data in ROM/FLASH
 #define ROM_CONST const
-// размещение описания схемы
+// schema description
 #define DESCR_MEM const
-// = Конец настройки ===========================================================
+// = end tuning ===========================================================
 //
-// признак окончани описания элементов в схеме
+// end element description flag
 #define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
 
-// надо вызвать первой, возвращает размер памяти необходимой для работы
-// в случае ошибки возвращает:
-// -1 - неверный элемент в описании
-// -2 - несовпадает размер сигнала или индекса
+// need call first, return amount of memory required for calculating
+// if error:
+// -1 - invalid element code in description
+// -2 - wrong sizeof tSignal or tElementIndex
 int fbdInit(DESCR_MEM unsigned char *descr);
-// надо вызвать после fbdInit() и передать указатели на память
+// need call after fbdInit(), set memory buf for calculating
 void fbdSetMemory(char *buf);
-// выполнить шаг расчета схемы, надо вызывать периодически, параметр - период вызова в мс.
+// executing one step scheme calculating, period - time from the previous call fbdDoStep() in milliseconds
 void fbdDoStep(tSignal period);
 
 #endif	/* FBDRT_H */
