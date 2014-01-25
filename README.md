@@ -5,11 +5,14 @@ run-time FBD library for microcontrollers
 
 FBD editor can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2.zip
 
+========
+
 1. Appointment
 Language functional diagrams designed to describe the functioning of the single logic controller or multiple controllers connected information network. Language describes a scheme consisting of the elements and their binding chains.
 
-2 . Basic Concepts
-2.1. The scheme is a set of elements and relationships between them.
+2. Basic Concepts
+
+2.1 The scheme is a set of elements and relationships between them
 
 2.2. Circuit element is the minimum functional circuit block that implements a specific operation (logic, arithmetic, delay, etc.) or provide connectivity scheme with input or output hardware controller circuits. Each element may be greater than or equal to zero the number of signal inputs and zero or one output signal. Inputs are numbered element - a number from 0 to N-1 , where N - number of inputs. Number of inputs and outputs depends on the type of item. For each input item, usually must be connected an external circuit. Inputs of some elements may have value "default". Value of the input to which no external circuit and there is no "default" is undefined, and the circuit in which there is an element, incorrect. Furthermore, the element may be greater than or equal to zero quantity affecting its functioning named parameters. Fixed values ​​and are given in the design scheme. Each element must have a unique (within the scheme ), a name that will identify it. Elements that do not contain the output, usually serve to anchor chains scheme to hardware outputs of the controller or the formation of values, accessible through the data interface controller. Binding is defined by the parameters of the element. Elements that do not contain entries to serve as a source of fixed or alternating signal, whose value is given by a parameter. In addition, setting the value of the signal values of pixels may be accessed via an information controller interface.
 
@@ -30,3 +33,6 @@ Language functional diagrams designed to describe the functioning of the single 
   - the value chain which has already been calculated, a sign of "no data" is reset;
   - the operation is performed on the input signal element (depending on the type of item).
 The operation is performed for all selected items.
+
+
+to be continued ...
