@@ -337,7 +337,7 @@ void fbdCalcElement(tElemIndex curIndex)
         } else break;                                       // если стек пуст, то расчет завершен
     } while(1);
 }
-// получение значения параметра элемента
+// get value of element parameter
 tSignal fbdGetParameter(tElemIndex element)
 {
     tElemIndex elem = 0;
@@ -346,7 +346,7 @@ tSignal fbdGetParameter(tElemIndex element)
     while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++]];
     return fbdParametersBuf[offset];
 }
-// получение пямяти элемента
+// get value of elemnt memory
 tSignal fbdGetStorage(tElemIndex element, unsigned char index)
 {
     tElemIndex elem = 0;
@@ -355,7 +355,7 @@ tSignal fbdGetStorage(tElemIndex element, unsigned char index)
     while (elem<element) offset += FBDStorageCount[fbdDescrBuf[elem++]];
     return fbdStorageBuf[offset + index];
 }
-// сохранение пямяти элемента
+// save element memory
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
     tElemIndex elem = 0;
@@ -365,10 +365,10 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
     offset += index;
     if(fbdStorageBuf[offset]!=value){
         fbdStorageBuf[offset]=value;
-        FBDsetProc(2,offset,&fbdStorageBuf[offset]);    // сохраняем в EEPROM
+        FBDsetProc(2,offset,&fbdStorageBuf[offset]);    // save to eeprom
     }
 }
-// установка признака расчитанного элемента
+// set element calculated flag
 void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |=  1u<<((element&3)<<1);
@@ -378,7 +378,7 @@ void setRiseFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |=  1u<<(((element&3)<<1)+1);
 }
-// получение признака расчитанного элемента
+// get element calculated flag
 char getCalcFlag(tElemIndex element)
 {
    return fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1))?1:0;
@@ -388,7 +388,7 @@ char getRiseFlag(tElemIndex element)
 {
     return fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1))?1:0;
 }
-// абсолютное значение для типа (tSignal)
+// abs value for type tSignal
 tSignal intAbs(tSignal val)
 {
     return (val>=0)?val:-val;
