@@ -25,6 +25,15 @@ The scheme is a set of elements and relationships between them.
 
 * Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value "== 0", a logical "1" - signal value "!=1". Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (a falling edge).
 
+Key features
+------------
+
+* Economical use of RAM memory, the scheme consists of 400 elements using only about 1 kb.
+* The algorithm is optimized for use in embedded controllers: PIC, AVR etc.
+* The algorithm does not use recursion, built data stack is used very sparingly.
+* Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded.
+* Library has no binding to a specific hardware and can be easily ported to any platform for which there is a C compiler.
+
 Limits
 ------
 
