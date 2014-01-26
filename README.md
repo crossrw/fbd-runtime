@@ -28,11 +28,11 @@ The scheme is a set of elements and relationships between them.
 Key features
 ------------
 
-* Economical use of RAM memory, the scheme consists of 400 elements using only about 1 kb.
-* The algorithm is optimized for use in embedded controllers: PIC, AVR etc.
-* The algorithm does not use recursion, built data stack is used very sparingly.
+* Small RAM memory requirements, the scheme consists of 400 elements using only about 1 kb.
+* The algorithm is optimized for use in embedded controllers: PIC, AVR etc. Calculating does not use recursion, built data stack is used very sparingly.
 * Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded.
 * Library has no binding to a specific hardware and can be easily ported to any platform for which there is a C compiler.
+* Support for storing intermediate results in EEPROM (for triggers, etc.), support for reading and saving values of network variables.
 
 Limits
 ------
