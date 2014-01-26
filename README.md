@@ -23,7 +23,16 @@ The scheme is a set of elements and relationships between them.
 
 * Chain is a logical connection between input and output elements and serves to transmit the signal states . Each circuit must be connected strictly one output element. State of the chain which is not connected to any output or connected more than one output of several elements is undefined , and a scheme in which to make such connections , incorrect. Chain, which is not connected to any input element is unused and its value is not calculated. Each chain has a unique (within the scheme) name. Chain with the same name are one chain.
 
-* Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent the four-byte number. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value "<= 0", a logical "1" - signal value ">=1". Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (a falling edge).
+* Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value "== 0", a logical "1" - signal value "!=1". Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (a falling edge).
+
+Limits
+------
+
+Calculation algorithm imposes certain restrictions on the possible options scheme.
+
+* The element can have no more than one output pin.
+* Values of the input and output elements and contacts interconnecting circuits have one defined when you compile the project data type (tSignal). Usually it is a signed integer.
+
 
 Algorithm for calculating the state of the circuit
 --------------------------------------------------
