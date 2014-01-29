@@ -91,12 +91,14 @@ tElemIndex fbdFlagsByteCount;
 //
 char fbdFirstFlag;
 
+#define MAXELEMTYPEVAL 18u
+
 // inputs element count
-ROM_CONST unsigned char FBDInputsCount[19] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3};
+ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3};
 // parameters element count
-ROM_CONST unsigned char FBDParametersCount[19] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0};
+ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0};
 // saved values count
-ROM_CONST unsigned char FBDStorageCount[19]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1};
+ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1};
 
 // --------------------------------------------------------------------------------------------
 
@@ -113,7 +115,7 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     fbdDescrBuf = buf;
 
     while(!((elem=fbdDescrBuf[fbdElementsCount])&0x80)) {
-        if(elem > 18u) return -1;
+        if(elem > MAXELEMTYPEVAL) return -1;
         inputs += FBDInputsCount[elem];
         parameters += FBDParametersCount[elem];
         fbdStorageCount += FBDStorageCount[elem];
@@ -122,8 +124,8 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     // check tSignal size
     if(elem != END_MARK) return -2;
     // calc pointers
-    fbdInputsBuf = (DESCR_MEM tElemIndex *)(fbdDescrBuf+fbdElementsCount+1);
-    fbdParametersBuf = (DESCR_MEM tSignal *)(fbdInputsBuf+inputs);
+    fbdInputsBuf = (DESCR_MEM tElemIndex *)(fbdDescrBuf + fbdElementsCount + 1);
+    fbdParametersBuf = (DESCR_MEM tSignal *)(fbdInputsBuf + inputs);
     //
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&0x03)?1:0);
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount;
@@ -133,12 +135,13 @@ void fbdSetMemory(char *buf)
 {
     tElemIndex i;
     fbdMemoryBuf = (tSignal *)buf;
-    // расчет указателей в буфере памяти
+    // init memory pointers
     fbdStorageBuf = fbdMemoryBuf+fbdElementsCount;
     fbdFlagsBuf = (char *)(fbdStorageBuf+fbdStorageCount);
-    // инициализация буфера памяти
+    // init memory buf
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
-    for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(2, i);    // восстанавливаем из EEPROM
+    // restore triggers values from EEPROM
+    for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(2, i);
     //
     fbdFirstFlag = 1;
 }
@@ -148,16 +151,16 @@ void fbdDoStep(tSignal period)
     tSignal value, param;
     tElemIndex index;
     unsigned char element;
-    // сброс признаков расчета и фронта
+    // reset calculating and rising flags
     memset(fbdFlagsBuf, 0, fbdFlagsByteCount);
-    // расчет
+    // main calculating loop
     index = 0;
     while(1) {
         element = fbdDescrBuf[index];
-        if(element > 127u) break;                                           // схема кончилась
+        if(element > 127u) break;                                           // end of schema
 
         switch(element) {
-            case 12:                                                        // элементы с таймером
+            case 12:                                                        // elements with timer
             case 17:
             case 18:
                 value = fbdGetStorage(index, 0);
@@ -167,11 +170,11 @@ void fbdDoStep(tSignal period)
                     fbdSetStorage(index, 0, value);
                 }
                 break;
-            case 0:                                                         // выходные элементы
+            case 0:                                                         // output elements
             case 14:
                 fbdCalcElement(index);
                 param = fbdGetParameter(index);
-                FBDsetProc(element?1:0, param, &fbdMemoryBuf[index]);       // устанавливаем значение переменной или контакта
+                FBDsetProc(element?1:0, param, &fbdMemoryBuf[index]);       // set variable or output pin value
                 break;
         }
         index++;
@@ -181,7 +184,7 @@ void fbdDoStep(tSignal period)
 
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
-// расчет смещения первого входа элемента
+// calc offset of first element input
 unsigned int fbdInputOffset(tElemIndex index)
 {
     tElemIndex i = 0;
@@ -190,18 +193,18 @@ unsigned int fbdInputOffset(tElemIndex index)
     while (i < index) offset += FBDInputsCount[fbdDescrBuf[i++]];
     return offset;
 }
-// выполнение расчета элемента
+// calculating element output value
 void fbdCalcElement(tElemIndex curIndex)
 {
-    tFBDStackItem FBDStack[FBDSTACKSIZE];       // стек расчета
-    tFBDStackPnt FBDStackPnt = 0;               // указатель в стеке
-    unsigned char curInput = 0;                 // текущий вход элемента
-    unsigned char inputCount;                   // количество входов текущего элемента
-    unsigned int baseInput;                     // смещение на первый вход текущего элемента
+    tFBDStackItem FBDStack[FBDSTACKSIZE];       // stack to calculate
+    tFBDStackPnt FBDStackPnt = 0;               // stack pointer
+    unsigned char curInput = 0;                 // current input of element
+    unsigned char inputCount;                   // number of inputs of the current element
+    unsigned int baseInput;                     //
     tElemIndex inpIndex;
-    tSignal s1,s2,s3,s4,v;                      // значения сигналов на входах
+    tSignal s1,s2,s3,s4,v;                      // inputs values
     //
-    baseInput = fbdInputOffset(curIndex);       // расчет смещения на первый вход элемента
+    baseInput = fbdInputOffset(curIndex);       //
     inputCount = FBDInputsCount[fbdDescrBuf[curIndex]];
     //
     do {
@@ -373,7 +376,7 @@ void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |=  1u<<((element&3)<<1);
 }
-// установка признака нарастающего фронта на выходе элемента
+// set signal rising flag
 void setRiseFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |=  1u<<(((element&3)<<1)+1);
@@ -383,7 +386,7 @@ char getCalcFlag(tElemIndex element)
 {
    return fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1))?1:0;
 }
-// получение признака нарастающего фронта на выходе элемента
+// get signal rising flag
 char getRiseFlag(tElemIndex element)
 {
     return fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1))?1:0;
