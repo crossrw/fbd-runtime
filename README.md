@@ -98,17 +98,41 @@ Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your cir
   * Do not use a direct entry in the eeprom because Library calls the цкшештп each time you change the value of any trigger or timer. Direct writing to eeprom can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
 
 In the absence of part of the PLC eeprom or network access these functions can not be implemented.
-Example implementation of read and write functions:
+Example empty (only for debug) implementation of read and write functions:
+```
+tSignal FBDgetProc(char type, tSignal index)
+{
+    switch(type) {
+    case 0:
+        printf(" request InputPin(%d)\n", index);
+        return 0;
+    case 1:
+        printf(" request Variable(%d)\n", index);
+        return 0;
+    case 2:
+        //printf(" request EEPROM(%d)\n", index);
+        return 0;
+    }
+}
 
-
-
-to be continued ...
+void FBDsetProc(char type, tSignal index, tSignal *value)
+{
+    switch(type)
+    {
+    case 0:
+        printf(" set OutputPin(%d) to value %d\n", index, *value);
+        break;
+    case 1:
+        printf(" set Variable(%d) to value %d\n", index, *value);
+        break;
+    case 2:
+        printf(" set EEPROM(%d) to value %d\n", index, *value);
+        break;
+    }
+}
+```
 
 Author
 ======
 
 Alexey Lutovinin -- crossrw1@gmail.com
-
-
-
-
