@@ -1,7 +1,8 @@
+![fbd logo](https://dl.dropboxusercontent.com/u/46913329/fbd2.png)
 fbd-runtime
 ===========
 
-Run-time FBD library for PLC (Programmable logic controller).
+Run-time FBD library for PLC (*Programmable logic controller*).
 
 About FBD: http://en.wikipedia.org/wiki/Function_block_diagram
 
@@ -40,7 +41,7 @@ Limits
 Calculation algorithm imposes certain restrictions on the possible options scheme.
 
 * The element can have no more than one output pin.
-* Values of the input and output elements and contacts interconnecting circuits have one defined when you compile the project data type (tSignal). Usually it is a signed integer.
+* Values of the input and output elements and contacts interconnecting circuits have one defined when you compile the project data type (`tSignal`). Usually it is a signed integer.
 
 
 Algorithm for calculating the state of the circuit
@@ -57,6 +58,40 @@ Payment scheme in the following sequence:
   * the value chain which has already been calculated, a sign of "no data" is reset;
   * the operation is performed on the input signal element (depending on the type of item).
 The operation is performed for all selected items.
+
+
+Library setup
+-------------
+
+Setting is done by editing `fbdrt.h` in the following sequence.
+
+1. Select the data type used to store the signal.
+2. Select the data type used to store the index of the item.
+3. If necessary, change the definition `ROM_CONST` and `DESCR_MEM`.
+4. Write your implementation functions `FBDgetProc(char type, tSignal index)` and `FBDsetProc(char type, tSignal index, tSignal *value)`.
+
+On the choice of the type of data signal depends with what signals can work your scheme. In addition, it affects memory usage and speed of calculation. For embedded microcontrollers that can be important. In general, the data type must describe signed integer. If you are not sure what to choose, use a 2-byte integer. In addition, you must specify the maximum and minimum value of the signal. For example, you can use the definition from limits.h. For example:
+```
+// data type for FBD signal
+typedef int16_t tSignal;
+#define MAX_SIGNAL INT16_MAX
+#define MIN_SIGNAL INT16_MIN
+```
+
+The data type of the element index affects how many elements can be in the scheme. In the general case should describe the type of unsigned integer. Type `unsigned char` will create a 255 elements, type `unsigned short` - 65535 elements. This is usually more than enough. Selected type affects the size of the memory used. Example:
+```
+// data type for element index
+typedef unsigned char tElemIndex;
+```
+
+Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allocate memory for an array of constants and circuit description. Their values depend on the compiler and the location of arrays. For example, When using compiler xc8 (Microchip) used to place data in a FLASH must specifiers `const`:
+```
+// data in ROM/FLASH
+#define ROM_CONST const
+// schema description
+#define DESCR_MEM const
+```
+
 
 
 to be continued ...
