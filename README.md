@@ -94,7 +94,7 @@ Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allo
 
 Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored eeprom (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or eeprom values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
   * For discrete inputs and outputs use the values `0` and `1`.
-  * For analogue inputs and outputs use the values expressed in engineering units.
+  * For analogue inputs and outputs use the values expressed in engineering units, possibly with some decimal factor. For this, in some cases, the conversion function should perform PLC raw input data to engineering units and vice versa. For example the value of temperature sensor +10.5 C must be converted to a number 105.
   * Do not use a direct entry in the eeprom because Library calls the цкшештп each time you change the value of any trigger or timer. Direct writing to eeprom can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
 
 In the absence of part of the PLC eeprom or network access these functions can not be implemented.
