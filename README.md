@@ -68,7 +68,7 @@ Setting is done by editing `fbdrt.h` in the following sequence.
 1. Select the data type used to store the signal.
 2. Select the data type used to store the index of the item.
 3. If necessary, change the definition `ROM_CONST` and `DESCR_MEM`.
-4. Write your implementation functions `FBDgetProc(char type, tSignal index)` and `FBDsetProc(char type, tSignal index, tSignal *value)`.
+4. Write your implementation functions `FBDgetProc()` and `FBDsetProc()`.
 
 On the choice of the type of data signal depends with what signals can work your scheme. In addition, it affects memory usage and speed of calculation. For embedded microcontrollers that can be important. In general, the data type must describe signed integer. If you are not sure what to choose, use a 2-byte integer. In addition, you must specify the maximum and minimum value of the signal. For example, you can use the definition from limits.h. For example:
 ```
@@ -91,6 +91,14 @@ Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allo
 // schema description
 #define DESCR_MEM const
 ```
+
+Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored eeprom (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or eeprom values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
+  * For discrete inputs and outputs use the values `0` and `1`.
+  * For analogue inputs and outputs use the values expressed in engineering units.
+  * Do not use a direct entry in the eeprom because Library calls the цкшештп each time you change the value of any trigger or timer. Direct writing to eeprom can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
+
+In the absence of part of the PLC eeprom or network access these functions can not be implemented.
+Example implementation of read and write functions:
 
 
 
