@@ -110,7 +110,7 @@ tSignal FBDgetProc(char type, tSignal index)
         printf(" request Variable(%d)\n", index);
         return 0;
     case 2:
-        //printf(" request EEPROM(%d)\n", index);
+        printf(" request EEPROM(%d)\n", index);
         return 0;
     }
 }
