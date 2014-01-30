@@ -122,46 +122,43 @@ Truth table:
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
 At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### Arithmetic addition (*internal code 0x08*)
-<table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1 + s2</td></tr>
-</table>
+Element has two inputs and one output. Output value is calculated as the arithmetic sum of the values of the input signals.
 #### Arithmetic subtraction (*internal code 0x09*)
-<table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1 - s2</td></tr>
-</table>
+Element has two inputs and one output. Output value is calculated as the difference between the value of the signal at the first input signal and the value at the second input.
 #### Arithmetic multiplication (*internal code 0x0a*)
-<table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1 * s2</td></tr>
-</table>
+Element has two inputs and one output. The output value - the first and second multiplication signal. Overflow values are not controlled.
 #### Arithmetic integer division (*internal code 0x0b*)
+Element has two inputs and one output. The output value - the value of the signal at the first input value divided by the signal on the second input. Special cases:
 <table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1 / s2</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
+ <tr><td>0</td><td>0</td><td>1</td></tr>
+ <tr><td>Any positive value</td><td>0</td><td>MAX_SIGNAL</td></tr>
+ <tr><td>Any negative value</td><td>0</td><td>MIN_SIGNAL</td></tr>
 </table>
+I know that you can not divide by 0. :)
 #### Timer or delay (*internal code 0x0c*)
-
+Timer - not exactly a traditional element. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table:
+<table>
+ <tr><td><b>D</b></td><td><b>Сondition</b></td><td><b>Output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Any</td><td>0</td></tr>
+ <tr><td>Logical "1"</td><td>Time T not expired</td><td>0</td></tr>
+ <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td></tr>
+</table>
 #### Comparator (*internal code 0x0d*)
-
+Element compares the signal at its two inputs. Truth table:
+<table>
+ <tr><td><b>Сondition</b></td><td><b>Output</b></td></tr>
+ <tr><td>Input1Val > Input2Val</td><td>1</td></tr>
+ <tr><td>Input1Val <= Input2Val</td><td>0</td></tr>
+</table>
 #### Output variable (*internal code 0x0e*)
-
+Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
 #### Input pin (*internal code 0x0f*)
-
+Element has one output, required for communication signal circuits to the input pin PLC.
 #### Input variable (*internal code 0x10*)
-
+Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
 #### PID (*internal code 0x11*)
-The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations.
-
+The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations. Element has 4 inputs (this is still a record) and one output. Inputs element are: U - current value controlled process, REF - reference value, DT - reaction time, P - proportionality factor. Features of the implementation can be found in the source code.
 #### Integrator (*internal code 0x12*)
 
 
