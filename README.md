@@ -2,7 +2,7 @@
 fbd-runtime
 ===========
 
-Run-time FBD library for PLC (*Programmable logic controller*).
+Run-time FBD library for PLC (*Programmable Logic Controller*).
 
 About FBD: http://en.wikipedia.org/wiki/Function_block_diagram
 
@@ -63,9 +63,9 @@ Supported elements
 ------------------
 
 #### Output pin (*internal code 0x00*)
-
+Element has one input, his does not perform the any calculations, required for communication signal circuits to the output terminal of the PLC.
 #### Const value (*internal code 0x01*)
-
+Element has one output. The output value is always equal to a constant, determined at the time of schema design.
 #### Logical NOT (*internal code 0x02*)
 Traditional, often used element NOT. Includes one input and one output. Truth table:
 <table>
