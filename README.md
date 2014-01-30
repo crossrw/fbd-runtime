@@ -29,11 +29,11 @@ The scheme is a set of elements and relationships between them.
 Key features
 ------------
 
-* Small RAM memory requirements, the scheme consists of 400 elements using only about 1 kb.
+* Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb.
 * The algorithm is optimized for use in embedded controllers: PIC, AVR, ARM etc. Calculating does not use recursion, built data stack is used very sparingly.
 * Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded.
 * Library has no binding to a specific hardware and can be easily ported to any platform for which there is a C compiler.
-* Support for storing intermediate results in EEPROM (for triggers, etc.), support for reading and saving values of network variables.
+* Support for storing intermediate results in EEPROM (for flip-flop, etc.), reading and saving values of network variables.
 
 Limits
 ------
@@ -67,31 +67,36 @@ Supported elements
 #### Const value (*internal code 0x01*)
 
 #### Logical NOT (*internal code 0x02*)
+Traditional, often used element NOT. Includes one input and one output. Truth table:
 <table>
- <tr><td><b>Inputs:</b></td><td>1</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1?0:1</td></tr>
+ <tr><td><b>Input</b></td><td><b>Output</b></td></tr>
+ <tr><td>Logical "0"</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>0</td></tr>
 </table>
 #### Logical AND (*internal code 0x03*)
+Element has two inputs and one output. Truth table:
 <table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1 && s2</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Any value</td><td>0</td></tr>
+ <tr><td>Any value</td><td>Logical "0"</td><td>0</td></tr>
+ <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td></tr>
 </table>
 #### Logical OR (*internal code 0x04*)
+Element has two inputs and one output. Truth table:
 <table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>s1 || s2</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td></tr>
+ <tr><td>Logical "1"</td><td>Any value</td><td>1</td></tr>
+ <tr><td>Any value</td><td>Logical "1"</td><td>1</td></tr>
 </table>
 #### Logical XOR (*internal code 0x05*)
+XOR element has two inputs and one output. Truth table:
 <table>
- <tr><td><b>Inputs:</b></td><td>2</td></tr>
- <tr><td>s1</td><td>First operand</td></tr>
- <tr><td>s2</td><td>Second operand</td></tr>
- <tr><td><b>Output:</b></td><td>(s1?1:0)^(s2?1:0)</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td></tr>
+ <tr><td>Logical "0"</td><td>Logical "1"</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>Logical "0"</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td></tr>
 </table>
 #### SR latch (*internal code 0x06*)
 SR-latch has two inputs (S and R) and one output (Q).
