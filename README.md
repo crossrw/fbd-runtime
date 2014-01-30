@@ -108,6 +108,7 @@ Supported elements
 #### Input variable (*internal code 0x10*)
 
 #### PID (*internal code 0x11*)
+The calculation can not use the traditional PID algorithm. Instead, use the Euler algorithm (Anyway, that called him a good man, who told me about it). This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations.
 
 #### Integrator (*internal code 0x12*)
 
