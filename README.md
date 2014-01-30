@@ -64,27 +64,35 @@ Supported elements
 
 #### Output pin (*internal code 0x00*)
 
-<table>
- <tr>
-  <td>Inputs:</td>
-  <td>1</td>
- </tr>
- <tr>
-  <td>Output:</td>
-  <td>none</td>
- </tr>
-</table>
-
 #### Const value (*internal code 0x01*)
 
 #### Logical NOT (*internal code 0x02*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>1</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1?0:1</td></tr>
+</table>
 #### Logical AND (*internal code 0x03*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1 && s2</td></tr>
+</table>
 #### Logical OR (*internal code 0x04*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1 || s2</td></tr>
+</table>
 #### Logical XOR (*internal code 0x05*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>(s1?1:0)^(s2?1:0)</td></tr>
+</table>
 #### RS-trigger (*internal code 0x06*)
 
 #### D-trigger (*internal code 0x07*)
@@ -108,7 +116,7 @@ Supported elements
 #### Input variable (*internal code 0x10*)
 
 #### PID (*internal code 0x11*)
-The calculation can not use the traditional PID algorithm. Instead, use the Euler algorithm (Anyway, that called him a good man, who told me about it). This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations.
+The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations.
 
 #### Integrator (*internal code 0x12*)
 
