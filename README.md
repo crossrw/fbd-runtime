@@ -59,6 +59,58 @@ Payment scheme in the following sequence:
   * the operation is performed on the input signal element (depending on the type of item).
 The operation is performed for all selected items.
 
+Supported elements
+------------------
+
+#### Output pin (*internal code 0x00*)
+
+<table>
+ <tr>
+  <td>Inputs:</td>
+  <td>1</td>
+ </tr>
+ <tr>
+  <td>Output:</td>
+  <td>none</td>
+ </tr>
+</table>
+
+#### Const value (*internal code 0x01*)
+
+#### Logical NOT (*internal code 0x02*)
+
+#### Logical AND (*internal code 0x03*)
+
+#### Logical OR (*internal code 0x04*)
+
+#### Logical XOR (*internal code 0x05*)
+
+#### RS-trigger (*internal code 0x06*)
+
+#### D-trigger (*internal code 0x07*)
+
+#### Arithmetic addition (*internal code 0x08*)
+
+#### Arithmetic subtraction (*internal code 0x09*)
+
+#### Arithmetic multiplication (*internal code 0x0a*)
+
+#### Arithmetic integer division (*internal code 0x0b*)
+
+#### Timer or delay (*internal code 0x0c*)
+
+#### Comparator (*internal code 0x0d*)
+
+#### Output variable (*internal code 0x0e*)
+
+#### Input pin (*internal code 0x0f*)
+
+#### Input variable (*internal code 0x10*)
+
+#### PID (*internal code 0x11*)
+
+#### Integrator (*internal code 0x12*)
+
 
 Library setup
 -------------
