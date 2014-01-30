@@ -93,18 +93,57 @@ Supported elements
  <tr><td>s2</td><td>Second operand</td></tr>
  <tr><td><b>Output:</b></td><td>(s1?1:0)^(s2?1:0)</td></tr>
 </table>
-#### RS-trigger (*internal code 0x06*)
-
-#### D-trigger (*internal code 0x07*)
-
+#### SR latch (*internal code 0x06*)
+SR-latch has two inputs (S and R) and one output (Q).
+While the S and R inputs are both low, feedback maintains the Q output in a constant state. If S (Set) is pulsed high while R (Reset) is held low, then the Q output is forced high, and stays high when S returns to low; similarly, if R is pulsed high while S is held low, then the Q output is forced low, and stays low when R returns to low.
+Truth table:
+<table>
+ <tr><td><b>S</b></td><td><b>R</b></td><td><b>Qnext</b></td><td><b>Action</b></td></tr>
+ <tr><td>0</td><td>0</td><td>Q</td><td>Hold state</td></tr>
+ <tr><td>0</td><td>1</td><td>0</td><td>Reset</td></tr>
+ <tr><td>1</td><td>0</td><td>1</td><td>Set</td></tr>
+ <tr><td>1</td><td>1</td><td>?</td><td>Not allowed</td></tr>
+</table>
+At each change its latch value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
+#### D flip-flop (*internal code 0x07*)
+D flip-flop has two inputs (D and C) and one output (Q).
+The D flip-flop captures the value of the D-input at a definite portion of the clock cycle (such as the rising edge of the clock). That captured value becomes the Q output. At other times, the output Q does not change.
+Truth table:
+<table>
+ <tr><td><b>D</b></td><td><b>C</b></td><td><b>Qnext</b></td><td><b>Action</b></td></tr>
+ <tr><td>Any value</td><td>Rising edge</td><td>D</td><td>Saving</td></tr>
+ <tr><td>Any value</td><td>Non-rising</td><td>Saved D value</td><td>Hold state</td></tr>
+</table>
+In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
+At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### Arithmetic addition (*internal code 0x08*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1 + s2</td></tr>
+</table>
 #### Arithmetic subtraction (*internal code 0x09*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1 - s2</td></tr>
+</table>
 #### Arithmetic multiplication (*internal code 0x0a*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1 * s2</td></tr>
+</table>
 #### Arithmetic integer division (*internal code 0x0b*)
-
+<table>
+ <tr><td><b>Inputs:</b></td><td>2</td></tr>
+ <tr><td>s1</td><td>First operand</td></tr>
+ <tr><td>s2</td><td>Second operand</td></tr>
+ <tr><td><b>Output:</b></td><td>s1 / s2</td></tr>
+</table>
 #### Timer or delay (*internal code 0x0c*)
 
 #### Comparator (*internal code 0x0d*)
