@@ -13,7 +13,7 @@
 //  1 - input variable
 //  2 - EEPROM value
 // index - number (index) of reading signal
-// function result - signal value
+// result - signal value
 extern tSignal FBDgetProc(char type, tSignal index);
 
 // FBDsetProc() writing output signal, variable or eeprom
@@ -91,14 +91,14 @@ tElemIndex fbdFlagsByteCount;
 //
 char fbdFirstFlag;
 
-#define MAXELEMTYPEVAL 18u
+#define MAXELEMTYPEVAL 19u
 
 // inputs element count
-ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3};
+ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3};
 // parameters element count
-ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0};
+ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0};
 // saved values count
-ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1};
+ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1};
 
 // --------------------------------------------------------------------------------------------
 
@@ -323,6 +323,14 @@ void fbdCalcElement(tElemIndex curIndex)
                         // ограничение
                         if(s1 > 0) { if(s1 > s3) s1 = s3; } else { if(s1 < -s3) s1 = -s3; }
                     } else s1 = fbdMemoryBuf[curIndex];
+                    break;
+                case 19:                                                                // Counter
+                    if(s3) s1 = 0; else {
+                        s1 = fbdGetStorage(curIndex, 0);
+                        if(getRiseFlag(fbdInputsBuf[baseInput])) s1++;
+                        if(getRiseFlag(fbdInputsBuf[baseInput+1])) s1--;
+                    }
+                    fbdSetStorage(curIndex, 0, s1);
                     break;
                 default:
                     s1 = 0;
