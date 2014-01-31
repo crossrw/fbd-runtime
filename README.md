@@ -152,8 +152,8 @@ Timer - not exactly a traditional element. It can be used as a signal generator 
 Element compares the signal at its two inputs. Truth table:
 <table>
  <tr><td><b>Сondition</b></td><td><b>Output</b></td></tr>
- <tr><td>Input1Val > Input2Val</td><td>1</td></tr>
- <tr><td>Input1Val <= Input2Val</td><td>0</td></tr>
+ <tr><td>Input1Val &gt; Input2Val</td><td>1</td></tr>
+ <tr><td>Input1Val &lt;= Input2Val</td><td>0</td></tr>
 </table>
 #### Output variable (*internal code 0x0e*)
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
