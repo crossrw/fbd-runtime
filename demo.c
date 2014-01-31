@@ -6,7 +6,9 @@
 
 const unsigned char description[] = {0x002, 0x000, 0x00C, 0x001, 0x08A, 0x002, 0x000, 0x000, 0x003, 0x000, 0x000, 0x0E8, 0x003};
 
-unsigned char memory[100];
+#define MEM_SIZE 100
+
+unsigned char memory[MEM_SIZE];
 
 tSignal FBDgetProc(char type, tSignal index)
 {
@@ -43,16 +45,21 @@ int main(void)
 {
     int res,i;
     res = fbdInit(description);
-    if(res<=0) {
+    if(res <= 0) {
      printf("result = %d\n", res);
      return 0;
     }
+    if(res > MEM_SIZE) {
+     printf("not enough memory\n");
+     return 0;
+    }
+    //
     fbdSetMemory(memory);
     printf("memory request size = %d\n", res);
     // main loop
     i=0;
-    while(i++ < 1000) {
-        printf("step %d\n", i);
+    while(1) {
+        printf("step %d\n", i++);
         Sleep(100);
         fbdDoStep(100);
     }
