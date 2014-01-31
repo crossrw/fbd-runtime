@@ -1,4 +1,4 @@
-![fbd logo](https://dl.dropboxusercontent.com/u/46913329/fbd2.png)
+![fbd logo](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/fbd2.png)
 fbd-runtime
 ===========
 
@@ -6,7 +6,7 @@ Run-time FBD library for PLC (*Programmable Logic Controller*).
 
 About FBD: http://en.wikipedia.org/wiki/Function_block_diagram
 
-FBD editor can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2setup.exe
+FBD editor can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2/fbd2setup.exe
 
 -------------------------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ The scheme is a set of elements and relationships between them.
 * Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value `==0`, a logical "1" - signal value `!=1`. Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (a falling edge).
 
 Example of a simple scheme is shown below:
-![fbd demo](https://dl.dropboxusercontent.com/u/46913329/fbddemo.png)
+![fbd demo](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/fbddemo.png)
 
 Key features
 ------------
@@ -38,7 +38,7 @@ Key features
 * Library has no binding to a specific hardware and can be easily ported to any platform for which there is a C compiler.
 * Support for storing intermediate results in EEPROM (for flip-flop, etc.), reading and saving values of network variables.
 
-![fbd struct](https://dl.dropboxusercontent.com/u/46913329/struct.png)
+![fbd struct](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/struct.png)
 
 Limits
 ------
