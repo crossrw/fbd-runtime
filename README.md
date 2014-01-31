@@ -26,6 +26,9 @@ The scheme is a set of elements and relationships between them.
 
 * Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value `==0`, a logical "1" - signal value `!=1`. Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (a falling edge).
 
+Example of a simple scheme is shown below:
+![fbd demo](https://dl.dropboxusercontent.com/u/46913329/fbddemo.png)
+
 Key features
 ------------
 
