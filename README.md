@@ -190,7 +190,7 @@ The data type of the element index affects how many elements can be in the schem
 typedef unsigned char tElemIndex;
 ```
 
-Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allocate memory for an array of constants and circuit description. Their values depend on the compiler and the location of arrays. For example, When using compiler xc8 (Microchip) used to place data in a FLASH must specifiers `const`:
+Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allocate memory for an array of constants and circuit description. Their values depend on the compiler and the location of arrays. For example, when using compiler xc8 (Microchip) used to place data in a FLASH must specifiers `const`:
 ```
 // data in ROM/FLASH
 #define ROM_CONST const
