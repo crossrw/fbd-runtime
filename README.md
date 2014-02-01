@@ -66,17 +66,14 @@ The operation is performed for all selected items.
 Elements by functions
 ---------------------
 
-## Input/Output
-
-## Logic
-
-## Flip-flop
-
-## Arithmetical
-
-## Other
-
-
+### Input/Output/Const
+#### Input pin (*internal code 0x0f*)
+```
+ +-----\
+ | Pin |----
+ +-----/
+```
+Element has one output, required for communication signal circuits to the input pin PLC.
 #### Output pin (*internal code 0x00*)
 ```
     /-----+
@@ -84,13 +81,28 @@ Elements by functions
     \-----+
 ```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output terminal of the PLC.
+Element has one output. The output value is always equal to a constant, determined at the time of schema design.
+#### Input variable (*internal code 0x10*)
+```
+ +-----\
+ | Var |----
+ +-----/
+```
+Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
+#### Output variable (*internal code 0x0e*)
+```
+    /----+
+----|  V |
+    \----+
+```
+Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
 #### Const value (*internal code 0x01*)
 ```
  +-------\
  | Const |----
  +-------/
 ```
-Element has one output. The output value is always equal to a constant, determined at the time of schema design.
+### Logic
 #### Logical NOT (*internal code 0x02*)
 ```
     +-----+
@@ -148,6 +160,7 @@ XOR element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Logical "0"</td><td>1</td></tr>
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td></tr>
 </table>
+### Flip-flop
 #### SR latch (*internal code 0x06*)
 ```
     +--+----+
@@ -185,7 +198,16 @@ Truth table:
 </table>
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
 At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
-#### Arithmetic addition (*internal code 0x08*)
+#### Pulse counter  (*internal code 0x13*)
+```
+    +--+----+
+----/+ |   Q|----
+----/- |    |
+----|R |    |
+    +--+----+
+```
+### Arithmetical
+#### Addition (*internal code 0x08*)
 ```
     +-----+
 ----|  +  |----
@@ -193,7 +215,7 @@ At each change its flip-flop value is stored in eeprom (function is called `FBDs
     +-----+
 ```
 Element has two inputs and one output. Output value is calculated as the arithmetic sum of the values of the input signals.
-#### Arithmetic subtraction (*internal code 0x09*)
+#### Subtraction (*internal code 0x09*)
 ```
     +-----+
 ----|  -  |----
@@ -201,7 +223,7 @@ Element has two inputs and one output. Output value is calculated as the arithme
     +-----+
 ```
 Element has two inputs and one output. Output value is calculated as the difference between the value of the signal at the first input signal and the value at the second input.
-#### Arithmetic multiplication (*internal code 0x0a*)
+#### Multiplication (*internal code 0x0a*)
 ```
     +-----+
 ----|  *  |----
@@ -209,7 +231,7 @@ Element has two inputs and one output. Output value is calculated as the differe
     +-----+
 ```
 Element has two inputs and one output. The output value - the first and second multiplication signal. Overflow values are not controlled.
-#### Arithmetic integer division (*internal code 0x0b*)
+#### Division (*internal code 0x0b*)
 ```
     +-----+
 ----|  /  |----
@@ -224,6 +246,7 @@ Element has two inputs and one output. The output value - the value of the signa
  <tr><td>Any negative value</td><td>0</td><td>MIN_SIGNAL</td></tr>
 </table>
 I know that you can not divide by 0. :)
+### Other
 #### Timer or delay (*internal code 0x0c*)
 ```
     +--+----+
@@ -252,27 +275,6 @@ Element compares the signal at its two inputs. Truth table:
  <tr><td>Input1Val &gt; Input2Val</td><td>1</td></tr>
  <tr><td>Input1Val &lt;= Input2Val</td><td>0</td></tr>
 </table>
-#### Output variable (*internal code 0x0e*)
-```
-    /----+
-----|  V |
-    \----+
-```
-Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
-#### Input pin (*internal code 0x0f*)
-```
- +-----\
- | Pin |----
- +-----/
-```
-Element has one output, required for communication signal circuits to the input pin PLC.
-#### Input variable (*internal code 0x10*)
-```
- +-----\
- | Var |----
- +-----/
-```
-Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
 #### PID (*internal code 0x11*)
 ```
     +---+-----+
@@ -292,15 +294,6 @@ The calculation can not use the traditional PID algorithm. Instead, use the Eule
     +---+----+
 ```
 Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
-#### Pulse counter  (*internal code 0x13*)
-```
-    +--+----+
-----|+ |   Q|----
-----|- |    |
-----|R |    |
-    +--+----+
-```
-
 
 
 Library setup
