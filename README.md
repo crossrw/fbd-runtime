@@ -63,12 +63,33 @@ Payment scheme in the following sequence:
   * the operation is performed on the input signal element (depending on the type of item).
 The operation is performed for all selected items.
 
-Supported elements
-------------------
+Elements by functions
+---------------------
+
+## Input/Output
+
+## Logic
+
+## Flip-flop
+
+## Arithmetical
+
+## Other
+
 
 #### Output pin (*internal code 0x00*)
+```
+    /-----+
+----| Pin |
+    \-----+
+```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output terminal of the PLC.
 #### Const value (*internal code 0x01*)
+```
+ +-------\
+ | Const |----
+ +-------/
+```
 Element has one output. The output value is always equal to a constant, determined at the time of schema design.
 #### Logical NOT (*internal code 0x02*)
 ```
@@ -219,6 +240,12 @@ Timer - not exactly a traditional element. It can be used as a signal generator 
  <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td></tr>
 </table>
 #### Comparator (*internal code 0x0d*)
+```
+    +-----+
+----|  >  |----
+----|     |
+    +-----+
+```
 Element compares the signal at its two inputs. Truth table:
 <table>
  <tr><td><b>Сondition</b></td><td><b>Output</b></td></tr>
@@ -226,15 +253,55 @@ Element compares the signal at its two inputs. Truth table:
  <tr><td>Input1Val &lt;= Input2Val</td><td>0</td></tr>
 </table>
 #### Output variable (*internal code 0x0e*)
+```
+    /----+
+----|  V |
+    \----+
+```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
 #### Input pin (*internal code 0x0f*)
+```
+ +-----\
+ | Pin |----
+ +-----/
+```
 Element has one output, required for communication signal circuits to the input pin PLC.
 #### Input variable (*internal code 0x10*)
+```
+ +-----\
+ | Var |----
+ +-----/
+```
 Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
 #### PID (*internal code 0x11*)
+```
+    +---+-----+
+----|U  |     |----
+----|Ref|     |
+----|DT |     |
+----|P  |     |
+    +---+-----+
+```
 The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). I heard somewhere that this algorithm is used for docking spacecraft. This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations. Element has 4 inputs (this is still a record) and one output. Inputs element are: U - current value controlled process, REF - reference value, DT - reaction time, P - proportionality factor. Features of the implementation can be found in the source code.
 #### Integrator (*internal code 0x12*)
+```
+    +---+----+
+----|X  |    |----
+----|DT |    |
+----|Lim|    |
+    +---+----+
+```
 Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
+#### Pulse counter  (*internal code 0x13*)
+```
+    +--+----+
+----|+ |   Q|----
+----|- |    |
+----|R |    |
+    +--+----+
+```
+
+
 
 Library setup
 -------------
