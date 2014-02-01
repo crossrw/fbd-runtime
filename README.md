@@ -71,6 +71,13 @@ Element has one input, his does not perform the any calculations, required for c
 #### Const value (*internal code 0x01*)
 Element has one output. The output value is always equal to a constant, determined at the time of schema design.
 #### Logical NOT (*internal code 0x02*)
+```
+    +-----+
+    |  1  |
+----|     O----
+    |     |
+    +-----+
+```
 Traditional, often used element NOT. Includes one input and one output. Truth table:
 <table>
  <tr><td><b>Input</b></td><td><b>Output</b></td></tr>
@@ -78,6 +85,12 @@ Traditional, often used element NOT. Includes one input and one output. Truth ta
  <tr><td>Logical "1"</td><td>0</td></tr>
 </table>
 #### Logical AND (*internal code 0x03*)
+```
+    +-----+
+----|  &  |----
+----|     |
+    +-----+
+```
 Element has two inputs and one output. Truth table:
 <table>
  <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
@@ -86,6 +99,12 @@ Element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td></tr>
 </table>
 #### Logical OR (*internal code 0x04*)
+```
+    +-----+
+----|  1  |----
+----|     |
+    +-----+
+```
 Element has two inputs and one output. Truth table:
 <table>
  <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
@@ -94,6 +113,12 @@ Element has two inputs and one output. Truth table:
  <tr><td>Any value</td><td>Logical "1"</td><td>1</td></tr>
 </table>
 #### Logical XOR (*internal code 0x05*)
+```
+    +-----+
+----| =1  |----
+----|     |
+    +-----+
+```
 XOR element has two inputs and one output. Truth table:
 <table>
  <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
@@ -103,6 +128,13 @@ XOR element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td></tr>
 </table>
 #### SR latch (*internal code 0x06*)
+```
+    +--+----+
+----|R |   Q|----
+    |  |    |
+----|S |    |
+    +--+----+
+```
 SR-latch has two inputs (S and R) and one output (Q).
 While the S and R inputs are both low, feedback maintains the Q output in a constant state. If S (Set) is pulsed high while R (Reset) is held low, then the Q output is forced high, and stays high when S returns to low; similarly, if R is pulsed high while S is held low, then the Q output is forced low, and stays low when R returns to low.
 Truth table:
@@ -115,6 +147,13 @@ Truth table:
 </table>
 At each change its latch value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### D flip-flop (*internal code 0x07*)
+```
+    +--+----+
+----|D |   Q|----
+    |  |    |
+----/C |    |
+    +--+----+
+```
 D flip-flop has two inputs (D and C) and one output (Q).
 The D flip-flop captures the value of the D-input at a definite portion of the clock cycle (such as the rising edge of the clock). That captured value becomes the Q output. At other times, the output Q does not change.
 Truth table:
@@ -126,12 +165,36 @@ Truth table:
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
 At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### Arithmetic addition (*internal code 0x08*)
+```
+    +-----+
+----|  +  |----
+----|     |
+    +-----+
+```
 Element has two inputs and one output. Output value is calculated as the arithmetic sum of the values of the input signals.
 #### Arithmetic subtraction (*internal code 0x09*)
+```
+    +-----+
+----|  -  |----
+----|     |
+    +-----+
+```
 Element has two inputs and one output. Output value is calculated as the difference between the value of the signal at the first input signal and the value at the second input.
 #### Arithmetic multiplication (*internal code 0x0a*)
+```
+    +-----+
+----|  *  |----
+----|     |
+    +-----+
+```
 Element has two inputs and one output. The output value - the first and second multiplication signal. Overflow values are not controlled.
 #### Arithmetic integer division (*internal code 0x0b*)
+```
+    +-----+
+----|  /  |----
+----|     |
+    +-----+
+```
 Element has two inputs and one output. The output value - the value of the signal at the first input value divided by the signal on the second input. Special cases:
 <table>
  <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
@@ -141,6 +204,13 @@ Element has two inputs and one output. The output value - the value of the signa
 </table>
 I know that you can not divide by 0. :)
 #### Timer or delay (*internal code 0x0c*)
+```
+    +--+----+
+----|D |   Q|----
+    |  |    |
+----|T |    |
+    +--+----+
+```
 Timer - not exactly a traditional element. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table:
 <table>
  <tr><td><b>D</b></td><td><b>Сondition</b></td><td><b>Output</b></td></tr>
