@@ -392,26 +392,50 @@ The format of the array shown in the table below:
  <tr><td>N</td><td>1</td><td>END_MARK</td><td>terminator elements descriptions</td></tr>
  <tr><td>N+1</td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element 1</td></tr>
  <tr><td></td><td>...</td><td>...</td><td>...</td></tr> 
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K element 1</td></tr>
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K(1) element 1</td></tr>
  <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element 2</td></tr>
  <tr><td></td><td>...</td><td>...</td><td>...</td></tr> 
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K element 2</td></tr>
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K(2) element 2</td></tr>
  <tr><td></td><td>...</td><td>...</td><td>...</td></tr> 
  <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element N</td></tr>
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K element N</td></tr>
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K(N) element N</td></tr>
  <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 1 of the element 1</td></tr>
  <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 2 of the element 1</td></tr>
- 
  <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M of the element 1</td></tr>
- 
- 
-
- 
- 
-
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(1) of the element 1</td></tr>
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 1 of the element N</td></tr>
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 2 of the element N</td></tr>
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(N) of the element N</td></tr>
 </table>
+Where: _N_ - elements count, _K(i)_ - number of inputs of an element __i__, _M(i)_ - number of parameters of an element __i__.
 
+Number of inputs and number of parameters depend on the element type code. Summary table of types of elements below:
+<table>
+ <tr><td><b>Element</b></td><td><b>Type code</b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
+ <tr><td>...</td><td>0</td><td>0</td><td>0</td></tr>
+ <tr><td>...</td><td>1</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>2</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>3</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>4</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>5</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>6</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>7</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>8</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>9</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>10</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>11</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>12</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>13</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>14</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>15</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>16</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>17</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>18</td><td>0</td><td>0</td></tr> 
+ <tr><td>...</td><td>19</td><td>0</td><td>0</td></tr>
+ <tr><td>...</td><td>20</td><td>0</td><td>0</td></tr>
+</table>
 
 Author
 ======
