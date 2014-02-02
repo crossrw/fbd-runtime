@@ -93,8 +93,8 @@ Element has one input, his does not perform the any calculations, required for c
 ```
  | Const >----
 ```
-### Logic
-#### Logical NOT (*internal code 0x02*)
+### Logical
+#### NOT (*internal code 0x02*)
 ```
     +---+
 ----|   O----
@@ -106,7 +106,7 @@ Traditional, often used element NOT. Includes one input and one output. Truth ta
  <tr><td>Logical "0"</td><td>1</td></tr>
  <tr><td>Logical "1"</td><td>0</td></tr>
 </table>
-#### Logical AND (*internal code 0x03*)
+#### AND (*internal code 0x03*)
 ```
     +-----+
 ----|  &  |----
@@ -120,7 +120,7 @@ Element has two inputs and one output. Truth table:
  <tr><td>Any value</td><td>Logical "0"</td><td>0</td></tr>
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td></tr>
 </table>
-#### Logical OR (*internal code 0x04*)
+#### OR (*internal code 0x04*)
 ```
     +-----+
 ----|  1  |----
@@ -134,7 +134,7 @@ Element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Any value</td><td>1</td></tr>
  <tr><td>Any value</td><td>Logical "1"</td><td>1</td></tr>
 </table>
-#### Logical XOR (*internal code 0x05*)
+#### XOR (*internal code 0x05*)
 ```
     +-----+
 ----| =1  |----
