@@ -335,7 +335,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     fbdSetStorage(curIndex, 0, s1);
                     break;
                 case 20:                                                                // MUX
-                    v %= 4;
+                    v &= 3;
                     if(v==1) s1 = s2; else
                     if(v==2) s1 = s3; else
                     if(v==3) s1 = s4;
