@@ -4,9 +4,10 @@ fbd-runtime
 
 Run-time FBD library for PLC (*Programmable Logic Controller*).
 
-About FBD: http://en.wikipedia.org/wiki/Function_block_diagram
+About FBD: http://en.wikipedia.org/wiki/Function_block_diagram.
+FBD - one of the programming languages described in the international standard IEC 61131-3. This implementation is not fully compatible with the standard, although many of its requirements are implemented.
 
-FBD editor can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2/fbd2setup.exe
+FBD editor and simulator can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2/fbd2setup.exe
 
 -------------------------------------------------------------------------------------
 
@@ -69,47 +70,35 @@ Elements by functions
 ### Input/Output/Const
 #### Input pin (*internal code 0x0f*)
 ```
- +-----\
- | Pin |----
- +-----/
+ | Pin >----
 ```
 Element has one output, required for communication signal circuits to the input pin PLC.
 #### Output pin (*internal code 0x00*)
 ```
-    /-----+
-----| Pin |
-    \-----+
+ ----< Pin |
 ```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output terminal of the PLC.
 Element has one output. The output value is always equal to a constant, determined at the time of schema design.
 #### Input variable (*internal code 0x10*)
 ```
- +-----\
- | Var |----
- +-----/
+ | Var >----
 ```
 Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
 #### Output variable (*internal code 0x0e*)
 ```
-    /----+
-----|  V |
-    \----+
+ ----< Var |
 ```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
 #### Const value (*internal code 0x01*)
 ```
- +-------\
- | Const |----
- +-------/
+ | Const >----
 ```
 ### Logic
 #### Logical NOT (*internal code 0x02*)
 ```
-    +-----+
-    |  1  |
-----|     O----
-    |     |
-    +-----+
+    +---+
+----|   O----
+    +---+
 ```
 Traditional, often used element NOT. Includes one input and one output. Truth table:
 <table>
@@ -198,7 +187,7 @@ Truth table:
 </table>
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
 At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
-#### Pulse counter  (*internal code 0x13*)
+#### Up-down counter (*internal code 0x13*)
 ```
     +--+----+
 ----/+ |   Q|----
@@ -206,6 +195,15 @@ At each change its flip-flop value is stored in eeprom (function is called `FBDs
 ----|R |    |
     +--+----+
 ```
+Element has three inputs and one output. If the input R high logic level, the output Q is reset to 0. If the input R is logic low, the output increases by 1 with a positive edge at the input "+" or decremented by 1 with a positive edge at the input "-". In the absence of a positive edge on the inputs "+" and "-" state of the output Q does not change. See table:
+<table>
+ <tr><td><b>+</b></td><td><b>-</b></td><td><b>R</b></td><td><b>Qnext</b></td><td><b>Action</b></td></tr>
+ <tr><td>Any value</td><td>Any value</td><td>1</td><td>0</td><td>Reset</td></tr>
+ <tr><td>Rising edge</td><td>Non-rising</td><td>0</td><td>Q+1</td><td>Increase</td></tr>
+ <tr><td>Non-rising</td><td>Rising edge</td><td>0</td><td>Q-1</td><td>Decrease</td></tr>
+ <tr><td>Non-rising</td><td>Non-rising</td><td>0</td><td>Q</td><td>Not change</td></tr>
+ <tr><td>Rising edge</td><td>Rising edge</td><td>0</td><td>Q</td><td>Not change</td></tr>
+</table>
 ### Arithmetical
 #### Addition (*internal code 0x08*)
 ```
@@ -246,8 +244,28 @@ Element has two inputs and one output. The output value - the value of the signa
  <tr><td>Any negative value</td><td>0</td><td>MIN_SIGNAL</td></tr>
 </table>
 I know that you can not divide by 0. :)
+### Regulation
+#### PID (*internal code 0x11*)
+```
+    +---+-----+
+----|U  |    Q|----
+----|Ref|     |
+----|DT |     |
+----|P  |     |
+    +---+-----+
+```
+The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). I heard somewhere that this algorithm is used for docking spacecraft. This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations. Element has 4 inputs and one output. Inputs element are: U - current value controlled process, REF - reference value, DT - reaction time, P - proportionality factor. Features of the implementation can be found in the source code.
+#### Integrator (*internal code 0x12*)
+```
+    +---+----+
+----|X  |   Q|----
+----|DT |    |
+----|Lim|    |
+    +---+----+
+```
+Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
 ### Other
-#### Timer or delay (*internal code 0x0c*)
+#### Timer (*internal code 0x0c*)
 ```
     +--+----+
 ----|D |   Q|----
@@ -275,30 +293,26 @@ Element compares the signal at its two inputs. Truth table:
  <tr><td>Input1Val &gt; Input2Val</td><td>1</td></tr>
  <tr><td>Input1Val &lt;= Input2Val</td><td>0</td></tr>
 </table>
-#### PID (*internal code 0x11*)
-```
-    +---+-----+
-----|U  |     |----
-----|Ref|     |
-----|DT |     |
-----|P  |     |
-    +---+-----+
-```
-The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). I heard somewhere that this algorithm is used for docking spacecraft. This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations. Element has 4 inputs (this is still a record) and one output. Inputs element are: U - current value controlled process, REF - reference value, DT - reaction time, P - proportionality factor. Features of the implementation can be found in the source code.
-#### Integrator (*internal code 0x12*)
+#### Multiplexer (*internal code 0x14*)
 ```
     +---+----+
-----|X  |    |----
-----|DT |    |
-----|Lim|    |
+----|D0 |   Q|----
+----|D1 |    |
+----|D2 |    |
+----|D3 |    |
+----|A  |    |
     +---+----+
 ```
-Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
-
-
+Extensible multiplexer. Element has five inputs (D0-D3, A) and one output. Select one of 4 inputs depending on input A. Truth table:
+<table>
+ <tr><td><b>A</b></td><td><b>Output Q</b></td></tr>
+ <tr><td>0</td><td>D0</td></tr>
+ <tr><td>1</td><td>D1</td></tr>
+ <tr><td>2</td><td>D2</td></tr>
+ <tr><td>3</td><td>D3</td></tr>
+</table>
 Library setup
 -------------
-
 Setting is done by editing `fbdrt.h` in the following sequence.
 
 1. Select the data type used to store the signal.
@@ -319,7 +333,6 @@ The data type of the element index affects how many elements can be in the schem
 // data type for element index
 typedef unsigned char tElemIndex;
 ```
-
 Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allocate memory for an array of constants and circuit description. Their values depend on the compiler and the location of arrays. For example, when using compiler xc8 (Microchip) used to place data in a FLASH must specifiers `const`:
 ```
 // data in ROM/FLASH
@@ -327,7 +340,6 @@ Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allo
 // schema description
 #define DESCR_MEM const
 ```
-
 Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored eeprom (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or eeprom values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
   * For discrete inputs and outputs use the values `0` and `1`.
   * For analogue inputs and outputs use the values expressed in engineering units, possibly with some decimal factor. For this, in some cases, the conversion function should perform PLC raw input data to engineering units and vice versa. For example the value of temperature sensor +10.5 C must be converted to a number 105.
