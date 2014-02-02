@@ -91,14 +91,14 @@ tElemIndex fbdFlagsByteCount;
 //
 char fbdFirstFlag;
 
-#define MAXELEMTYPEVAL 19u
+#define MAXELEMTYPEVAL 20u
 
 // inputs element count
-ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3};
+ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5};
 // parameters element count
-ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0};
+ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0};
 // saved values count
-ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1};
+ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0};
 
 // --------------------------------------------------------------------------------------------
 
@@ -231,12 +231,14 @@ void fbdCalcElement(tElemIndex curIndex)
             // входов больше нет, а те которые есть уже рассчитаны
             // определяем значения входов (если надо)
             switch(inputCount) {
+                case 5:
+                    v = fbdMemoryBuf[fbdInputsBuf[baseInput + 4]];
                 case 4:
-                    s4 = fbdMemoryBuf[fbdInputsBuf[baseInput+3]];
+                    s4 = fbdMemoryBuf[fbdInputsBuf[baseInput + 3]];
                 case 3:
-                    s3 = fbdMemoryBuf[fbdInputsBuf[baseInput+2]];
+                    s3 = fbdMemoryBuf[fbdInputsBuf[baseInput + 2]];
                 case 2:
-                    s2 = fbdMemoryBuf[fbdInputsBuf[baseInput+1]];
+                    s2 = fbdMemoryBuf[fbdInputsBuf[baseInput + 1]];
                 case 1:
                     s1 = fbdMemoryBuf[fbdInputsBuf[baseInput]];
             }
@@ -331,6 +333,12 @@ void fbdCalcElement(tElemIndex curIndex)
                         if(getRiseFlag(fbdInputsBuf[baseInput+1])) s1--;
                     }
                     fbdSetStorage(curIndex, 0, s1);
+                    break;
+                case 20:                                                                // MUX
+                    v %= 4;
+                    if(v==1) s1 = s2; else
+                    if(v==2) s1 = s3; else
+                    if(v==3) s1 = s4;
                     break;
                 default:
                     s1 = 0;
