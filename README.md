@@ -375,6 +375,43 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
     }
 }
 ```
+Scheme description
+------------------
+Description of the scheme is an array of data that may be created by the editor or other means. Dataset should be placed in the memory controller, such as a FLASH or RAM. A pointer to the array is passed to a function `fbdInit(DESCR_MEM unsigned char *buf)`. The array consists of three parts:
+  * Description of circuit elements (ending flag `END_MARK`)
+  * Description of connecting the input pins elements
+  * Parameters of elements
+
+The format of the array shown in the table below:
+<table>
+ <tr><td><b>Offset</b></td><td><b>Size</b></td><td><b>Value</b></td><td><b>Desciption</b></td></tr>
+ <tr><td>0</td><td>1</td><td>type of element 1</td><td>description of element 1</td></tr>
+ <tr><td>1</td><td>1</td><td>type of element 2</td><td>description of element 2</td></tr>
+ <tr><td></td><td>1</td><td>...</td><td>...</td></tr>
+ <tr><td>N-1</td><td>1</td><td>type of element N</td><td>description of element N</td></tr>
+ <tr><td>N</td><td>1</td><td>END_MARK</td><td>terminator elements descriptions</td></tr>
+ <tr><td>N+1</td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element 1</td></tr>
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr> 
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K element 1</td></tr>
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element 2</td></tr>
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr> 
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K element 2</td></tr>
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr> 
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element N</td></tr>
+ <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K element N</td></tr>
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 1 of the element 1</td></tr>
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 2 of the element 1</td></tr>
+ 
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
+ <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M of the element 1</td></tr>
+ 
+ 
+
+ 
+ 
+
+</table>
+
 
 Author
 ======
