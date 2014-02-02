@@ -32,7 +32,6 @@ Example of a simple scheme is shown below:
 
 Key features
 ------------
-
 * Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb.
 * The algorithm is optimized for use in embedded controllers: PIC, AVR, ARM etc. Calculating does not use recursion, built data stack is used very sparingly.
 * Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded.
@@ -43,15 +42,13 @@ Key features
 
 Limits
 ------
-
 Calculation algorithm imposes certain restrictions on the possible options scheme.
 
-* The element can have no more than one output pin.
-* Values of the input and output elements and contacts interconnecting circuits have one defined when you compile the project data type (`tSignal`). Usually it is a signed integer.
+* Element can not have more than one output pin.
+* The scheme supports only one data type (`tSignal`). This applies to the inputs and outputs of the elements, values of the constants. The data type is determined at compile the project. Usually it is signed integer.
 
 Algorithm for calculating the state of the circuit
 --------------------------------------------------
-
 Calculation of the state controller scheme executed cyclically with a certain period.
 Each cycle calculation circuit state is to calculate output signals to the output elements which are not connected to the circuit.
 Payment scheme in the following sequence:
@@ -66,7 +63,6 @@ The operation is performed for all selected items.
 
 Elements by functions
 ---------------------
-
 ### Input/Output/Const
 #### Input pin (*internal code 0x0f*)
 ```
