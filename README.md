@@ -376,9 +376,9 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
 Scheme description
 ------------------
 Description of the scheme is an array of data that may be created by the editor or other means. Dataset should be placed in the memory controller, such as a FLASH or RAM. A pointer to the array is passed to a function `fbdInit(DESCR_MEM unsigned char *buf)`. The array consists of three parts:
-  * list of elements (ending flag `END_MARK`)
-  * Description of connecting the input pins elements
-  * Parameters of elements
+  1. List of elements (ending flag `END_MARK`)
+  2. Description of connecting the input pins elements
+  3. Values of elements parameters
 
 The format of the array shown in the table below:
 <table>
