@@ -62,33 +62,33 @@ The operation is performed for all selected items.
 Elements by functions
 ---------------------
 ### Input/Output/Const
-#### Input pin (*internal code 0x0f*)
+#### Input pin
 ```
  | Pin >----
 ```
 Element has one output, required for communication signal circuits to the input pin PLC.
-#### Output pin (*internal code 0x00*)
+#### Output pin
 ```
  ----< Pin |
 ```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output terminal of the PLC.
 Element has one output. The output value is always equal to a constant, determined at the time of schema design.
-#### Input variable (*internal code 0x10*)
+#### Input variable
 ```
  | Var >----
 ```
 Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
-#### Output variable (*internal code 0x0e*)
+#### Output variable
 ```
  ----< Var |
 ```
 Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
-#### Const value (*internal code 0x01*)
+#### Const value
 ```
  | Const >----
 ```
 ### Logical
-#### NOT (*internal code 0x02*)
+#### NOT
 ```
     +---+
 ----|   O----
@@ -100,7 +100,7 @@ Traditional, often used element NOT. Includes one input and one output. Truth ta
  <tr><td>Logical "0"</td><td>1</td></tr>
  <tr><td>Logical "1"</td><td>0</td></tr>
 </table>
-#### AND (*internal code 0x03*)
+#### AND
 ```
     +-----+
 ----|  &  |----
@@ -114,7 +114,7 @@ Element has two inputs and one output. Truth table:
  <tr><td>Any value</td><td>Logical "0"</td><td>0</td></tr>
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td></tr>
 </table>
-#### OR (*internal code 0x04*)
+#### OR
 ```
     +-----+
 ----|  1  |----
@@ -128,7 +128,7 @@ Element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Any value</td><td>1</td></tr>
  <tr><td>Any value</td><td>Logical "1"</td><td>1</td></tr>
 </table>
-#### XOR (*internal code 0x05*)
+#### XOR
 ```
     +-----+
 ----| =1  |----
@@ -144,7 +144,7 @@ XOR element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td></tr>
 </table>
 ### Flip-flop
-#### SR latch (*internal code 0x06*)
+#### SR latch
 ```
     +--+----+
 ----|R |   Q|----
@@ -163,7 +163,7 @@ Truth table:
  <tr><td>1</td><td>1</td><td>?</td><td>Not allowed</td></tr>
 </table>
 At each change its latch value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
-#### D flip-flop (*internal code 0x07*)
+#### D flip-flop
 ```
     +--+----+
 ----|D |   Q|----
@@ -181,7 +181,7 @@ Truth table:
 </table>
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
 At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
-#### Up-down counter (*internal code 0x13*)
+#### Up-down counter
 ```
     +--+----+
 ----/+ |   Q|----
@@ -199,7 +199,7 @@ Element has three inputs and one output. If the input R high logic level, the ou
  <tr><td>Rising edge</td><td>Rising edge</td><td>0</td><td>Q</td><td>Not change</td></tr>
 </table>
 ### Arithmetical
-#### Addition (*internal code 0x08*)
+#### Addition
 ```
     +-----+
 ----|  +  |----
@@ -207,7 +207,7 @@ Element has three inputs and one output. If the input R high logic level, the ou
     +-----+
 ```
 Element has two inputs and one output. Output value is calculated as the arithmetic sum of the values of the input signals.
-#### Subtraction (*internal code 0x09*)
+#### Subtraction
 ```
     +-----+
 ----|  -  |----
@@ -215,7 +215,7 @@ Element has two inputs and one output. Output value is calculated as the arithme
     +-----+
 ```
 Element has two inputs and one output. Output value is calculated as the difference between the value of the signal at the first input signal and the value at the second input.
-#### Multiplication (*internal code 0x0a*)
+#### Multiplication
 ```
     +-----+
 ----|  *  |----
@@ -223,7 +223,7 @@ Element has two inputs and one output. Output value is calculated as the differe
     +-----+
 ```
 Element has two inputs and one output. The output value - the first and second multiplication signal. Overflow values are not controlled.
-#### Division (*internal code 0x0b*)
+#### Division
 ```
     +-----+
 ----|  /  |----
@@ -239,7 +239,7 @@ Element has two inputs and one output. The output value - the value of the signa
 </table>
 I know that you can not divide by 0. :)
 ### Regulation
-#### PID (*internal code 0x11*)
+#### PID
 ```
     +---+-----+
 ----|U  |    Q|----
@@ -249,7 +249,7 @@ I know that you can not divide by 0. :)
     +---+-----+
 ```
 The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). I heard somewhere that this algorithm is used for docking spacecraft. This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations. Element has 4 inputs and one output. Inputs element are: U - current value controlled process, REF - reference value, DT - reaction time, P - proportionality factor. Features of the implementation can be found in the source code.
-#### Integrator (*internal code 0x12*)
+#### Integrator
 ```
     +---+----+
 ----|X  |   Q|----
@@ -259,7 +259,7 @@ The calculation can not use the traditional PID algorithm. Instead, use the Eule
 ```
 Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
 ### Other
-#### Timer (*internal code 0x0c*)
+#### Timer
 ```
     +--+----+
 ----|D |   Q|----
@@ -274,7 +274,7 @@ Timer - not exactly a traditional element. It can be used as a signal generator 
  <tr><td>Logical "1"</td><td>Time T not expired</td><td>0</td></tr>
  <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td></tr>
 </table>
-#### Comparator (*internal code 0x0d*)
+#### Comparator
 ```
     +-----+
 ----|  >  |----
@@ -287,7 +287,7 @@ Element compares the signal at its two inputs. Truth table:
  <tr><td>Input1Val &gt; Input2Val</td><td>1</td></tr>
  <tr><td>Input1Val &lt;= Input2Val</td><td>0</td></tr>
 </table>
-#### Multiplexer (*internal code 0x14*)
+#### Multiplexer
 ```
     +---+----+
 ----|D0 |   Q|----
@@ -375,6 +375,7 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
 ```
 Scheme description
 ------------------
+#### Internals
 Description of the scheme is an array of data that may be created by the editor or other means. Dataset should be placed in the memory controller, such as a FLASH or RAM. A pointer to the array is passed to a function `fbdInit(DESCR_MEM unsigned char *buf)`. The array consists of three parts:
   1. List of elements (ending flag `END_MARK`)
   2. Description of connecting the input pins elements
@@ -415,7 +416,7 @@ Where: _N_-elements count, _K(i)_-number of inputs of an element __i__, _M(i)_-n
 ```
 Function `fbdInit()` checks the value of the `END_MARK` before starting the scheme.
 
-Number of inputs and number of parameters depend on the element type code. Summary table of types of elements below:
+Number of inputs and parameters count depend on the element type code. If the element has no inputs or parameters, the values in the array are missing. Summary table of types of elements below:
 <table>
  <tr><td><b>Element</b></td><td><b>Type code</b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
  <tr><td>Output pin</td><td>0</td><td>1</td><td>1</td></tr>
@@ -440,7 +441,27 @@ Number of inputs and number of parameters depend on the element type code. Summa
  <tr><td>Up-down counter</td><td>19</td><td>3</td><td>0</td></tr>
  <tr><td>Multiplexer</td><td>20</td><td>5</td><td>0</td></tr>
 </table>
+#### Example
+For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
 
+![fbd example](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/demo2.png)
+
+Description of the scheme will be as follows (for the case when the `tSignal` is defined as `short`, `tElemIndex` - `unsigned char`):
+```
+{0x02, 0x01, 0x00, 0x8A, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}
+```
+Bytes description:
+<table>
+ <tr><td><b>Offset</b></td><td><b>Value</b></td><td><b>Description</b></td></tr>
+ <tr><td>0</td><td>0x02</td><td>Element logical NOT</td></tr>
+ <tr><td>1</td><td>0x01</td><td>Element Const</td></tr>
+ <tr><td>2</td><td>0x00</td><td>Element Output pin</td></tr>
+ <tr><td>3</td><td>0x8A</td><td>END_MARK</td></tr>
+ <tr><td>4</td><td>0x01</td><td>Input 1 of element index 0 (NOT) connected to output element index 1 (Const)</td></tr>
+ <tr><td>5</td><td>0x00</td><td>Input 1 of element index 2 (Output) connected to output element index 0 (NOT)</td></tr>
+ <tr><td>6</td><td>0x0000</td><td>Parameter of element index 1 (Const). Value of constant is 0</td></tr>
+ <tr><td>8</td><td>0x0000</td><td>Parameter of element index 1 (Output). Number of output pin is 0</td></tr>
+</table>
 Current status
 ==============
 It's works. Now the library is used in the finished projects and does not contain know the problems. In the near future further development schema editor:
