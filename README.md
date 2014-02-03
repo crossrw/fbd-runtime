@@ -441,11 +441,13 @@ Number of inputs and number of parameters depend on the element type code. Summa
  <tr><td>Multiplexer</td><td>20</td><td>5</td><td>0</td></tr>
 </table>
 
-Library status
+Current status
 ==============
-It's works. Now the library is used in the finished projects and I know the problems does not contain. In the near future further development schema editor:
- * interface translation in other languages (only Russian now);
- * ability to add markup (comments, etc.).
+It's works. Now the library is used in the finished projects and does not contain know the problems. In the near future further development schema editor:
+ * interface translation in other languages (only Russian now)
+ * write documentation
+ * ability to add markup (comments, etc.)
+ * add the ability to create user libraries
 
 Author
 ======
