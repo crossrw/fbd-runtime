@@ -409,32 +409,32 @@ The format of the array shown in the table below:
  <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
  <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(N) of the element N</td></tr>
 </table>
-Where: _N_ - elements count, _K(i)_ - number of inputs of an element __i__, _M(i)_ - number of parameters of an element __i__.
+Where: _N_-elements count, _K(i)_-number of inputs of an element __i__, _M(i)_-number of parameters of an element __i__.
 
 Number of inputs and number of parameters depend on the element type code. Summary table of types of elements below:
 <table>
  <tr><td><b>Element</b></td><td><b>Type code</b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
- <tr><td>...</td><td>0</td><td>0</td><td>0</td></tr>
- <tr><td>...</td><td>1</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>2</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>3</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>4</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>5</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>6</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>7</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>8</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>9</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>10</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>11</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>12</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>13</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>14</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>15</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>16</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>17</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>18</td><td>0</td><td>0</td></tr> 
- <tr><td>...</td><td>19</td><td>0</td><td>0</td></tr>
- <tr><td>...</td><td>20</td><td>0</td><td>0</td></tr>
+ <tr><td>Output pin</td><td>0</td><td>1</td><td>1</td></tr>
+ <tr><td>Const</td><td>1</td><td>0</td><td>1</td></tr> 
+ <tr><td>Logical NOT</td><td>2</td><td>1</td><td>0</td></tr> 
+ <tr><td>Logical AND</td><td>3</td><td>2</td><td>0</td></tr> 
+ <tr><td>Logical OR</td><td>4</td><td>2</td><td>0</td></tr> 
+ <tr><td>Logical XOR</td><td>5</td><td>2</td><td>0</td></tr> 
+ <tr><td>SR latch</td><td>6</td><td>2</td><td>0</td></tr> 
+ <tr><td>D flip-flop</td><td>7</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical ADD</td><td>8</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical SUB</td><td>9</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical MUL</td><td>10</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical DIV</td><td>11</td><td>2</td><td>0</td></tr> 
+ <tr><td>Timer</td><td>12</td><td>2</td><td>0</td></tr> 
+ <tr><td>Comparator</td><td>13</td><td>2</td><td>0</td></tr> 
+ <tr><td>Output var</td><td>14</td><td>1</td><td>1</td></tr> 
+ <tr><td>Input pin</td><td>15</td><td>0</td><td>1</td></tr> 
+ <tr><td>Input var</td><td>16</td><td>0</td><td>1</td></tr> 
+ <tr><td>PID regulator</td><td>17</td><td>4</td><td>0</td></tr> 
+ <tr><td>Integrator</td><td>18</td><td>3</td><td>0</td></tr> 
+ <tr><td>Up-down counter</td><td>19</td><td>3</td><td>0</td></tr>
+ <tr><td>Multiplexer</td><td>20</td><td>5</td><td>0</td></tr>
 </table>
 
 Author
