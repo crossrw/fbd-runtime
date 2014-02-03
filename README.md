@@ -376,7 +376,7 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
 Scheme description
 ------------------
 Description of the scheme is an array of data that may be created by the editor or other means. Dataset should be placed in the memory controller, such as a FLASH or RAM. A pointer to the array is passed to a function `fbdInit(DESCR_MEM unsigned char *buf)`. The array consists of three parts:
-  * Description of circuit elements (ending flag `END_MARK`)
+  * list of elements (ending flag `END_MARK`)
   * Description of connecting the input pins elements
   * Parameters of elements
 
@@ -408,6 +408,12 @@ The format of the array shown in the table below:
  <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(N) of the element N</td></tr>
 </table>
 Where: _N_-elements count, _K(i)_-number of inputs of an element __i__, _M(i)_-number of parameters of an element __i__.
+
+`END_MARK` is a sign of the end of the list of elements, in addition, it contains information about the size and value of the signal element index. Its value is defined in the file `fbdrt.h` as:
+```
+#define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
+```
+Function `fbdInit()` checks the value of the `END_MARK` before starting the scheme.
 
 Number of inputs and number of parameters depend on the element type code. Summary table of types of elements below:
 <table>
