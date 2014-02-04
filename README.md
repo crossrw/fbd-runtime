@@ -500,7 +500,10 @@ Each call results in the calculation of all the items and setting values of all 
 Some elements of the schemes use time. For each such element library organizes independent timer value is stored in RAM. Timers used to store the type `tSignal`.  Timer values changes by `period` every time the function `fbdDoStep(tSignal period)` is called. Time can be expressed in any units: sec, ms, &micro;s. Unit selection depends on the time scale in which the PLC should work. In my opinion, a decent selection of milliseconds for most cases.
 Current status
 ==============
-It's works. Now the library is used in the finished projects and does not contain know the problems. In the near future further development schema editor:
+It's works. Now the library is used in the finished projects and does not contain know the problems. Plans for fbdrt development:
+ * speed optimization
+
+Plans for editor development:
  * interface translation in other languages (only Russian now)
  * write documentation
  * ability to add markup (comments, etc.)
@@ -508,5 +511,4 @@ It's works. Now the library is used in the finished projects and does not contai
 
 Author
 ======
-
 Alexey Lutovinin -- crossrw1@gmail.com
