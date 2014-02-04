@@ -42,10 +42,9 @@ Perfomance
 ----------
 One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used. The results of the pilot testing [scheme for 10 elements](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/generator.zip) are shown in the table below:
 <table>
-<tr><td><b>CPU</b></td><td><b>Compiler</b></td><td><b>Сycle time</b></td><td><b>One elem time (average)</b></td></tr>
-<tr><td>PIC18@39.32MHz</td><td>xc8 v1.21</td><td>~5ms</td><td>~500&micro;s</td></tr>
+<tr><td><b>CPU@Freq</b></td><td><b>Compiler</b></td><td><b>Сycle time</b></td><td><b>One elem time (average)</b></td></tr>
+<tr><td>PIC18@9.83x4MHz</td><td>xc8 v1.21</td><td>~5ms</td><td>~500&micro;s</td></tr>
 <tr><td>ARM920T@180MHz</td><td>gcc v4.1.2</td><td>~61&micro;s</td><td>~6.1&micro;s</td></tr>
-<tr><td>i5-2500K@3.3GHz</td><td>gcc v4.4.1</td><td>~320ns</td><td>~32.0ns</td></tr>
 <tr><td>i7-3770K@3.5GHz</td><td>gcc v4.4.1</td><td>~279ns</td><td>~27.9ns</td></tr>
 </table>
 Limits
@@ -498,8 +497,7 @@ void fbdDoStep(tSignal period)
 __period__ - time elapsed from the previous call.
 Each call results in the calculation of all the items and setting values of all output variables and pins.
 ### Timing
-
-
+Some elements of the schemes use time. For each such element library organizes independent timer value is stored in RAM. Timers used to store the type `tSignal`.  Timer values changes by `period` every time the function `fbdDoStep(tSignal period)` is called. Time can be expressed in any units: sec, ms, &micro;s. Unit selection depends on the time scale in which the PLC should work. In my opinion, a decent selection of milliseconds for most cases.
 Current status
 ==============
 It's works. Now the library is used in the finished projects and does not contain know the problems. In the near future further development schema editor:
