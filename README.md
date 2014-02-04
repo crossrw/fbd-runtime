@@ -40,8 +40,7 @@ Key features
 
 Perfomance
 ----------
-One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used.
-
+One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used. The results of the pilot testing scheme for 10 elements are shown in the table below:
 <table>
  <tr><td><b>CPU</b></td><td><b>Compiler</b></td><td><b>Сycle time</b></td><td><b>One elem time</b></td></tr>
  <tr><td>PIC18@39.32MHz</td><td>xc8 v1.21</td><td>~5ms</td><td>~500&micro;s</td></tr>
@@ -49,10 +48,6 @@ One cycle calculation scheme is performed in the function call `fbdDoStep()`. Du
  <tr><td>i5-2500K@3.3GHz</td><td>gcc v4.4.1</td><td>~320ns</td><td>~32.0ns</td></tr>
  <tr><td>i7-3770K@3.5GHz</td><td>gcc v4.4.1</td><td>~279ns</td><td>~27.9ns</td></tr>
 </table>
-
-
-
-
 Limits
 ------
 Calculation algorithm imposes certain restrictions on the possible options scheme.
