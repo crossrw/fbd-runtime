@@ -472,6 +472,27 @@ Bytes description:
  <tr><td>6</td><td>0x0000</td><td>Parameter of element index 1 (Const). Value of constant is 0</td></tr>
  <tr><td>8</td><td>0x0000</td><td>Parameter of element index 1 (Output). Number of output pin is 0</td></tr>
 </table>
+Excecution
+==========
+### Initialization
+Initialization is performed once at the beginning. Initialization may be performed again in the case of change circuit or a PLC reset. To initialize you must first call the function:
+```
+int fbdInit(DESCR_MEM unsigned char *descr)
+```
+__descr__ - pointer to array of scheme description.
+A negative _result_ - error: 
+__-1__ - invalid element code in description;
+__-2__ - wrong value of END_MARK flag.
+Positive _result_ - the amount of RAM needed to run the scheme.
+
+Then, in the absence of a sufficient amount of errors and memory function must be called:
+```
+void fbdSetMemory(char *buf)
+```
+__buf__ - pointer to RAM buffer. The function does not return a result. After this call, the scheme is ready.
+### Step by step execution
+### Timing
+
 Current status
 ==============
 It's works. Now the library is used in the finished projects and does not contain know the problems. In the near future further development schema editor:
