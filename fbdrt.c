@@ -360,7 +360,7 @@ void fbdCalcElement(tElemIndex curIndex)
 tSignal fbdGetParameter(tElemIndex element)
 {
     tElemIndex elem = 0;
-    int offset = 0;
+    unsigned int offset = 0;
     //
     while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++]];
     return fbdParametersBuf[offset];
@@ -369,7 +369,7 @@ tSignal fbdGetParameter(tElemIndex element)
 tSignal fbdGetStorage(tElemIndex element, unsigned char index)
 {
     tElemIndex elem = 0;
-    int offset = 0;
+    unsigned int offset = 0;
     //
     while (elem<element) offset += FBDStorageCount[fbdDescrBuf[elem++]];
     return fbdStorageBuf[offset + index];
@@ -378,7 +378,7 @@ tSignal fbdGetStorage(tElemIndex element, unsigned char index)
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
     tElemIndex elem = 0;
-    int offset = 0;
+    unsigned int offset = 0;
     //
     while (elem < element) offset += FBDStorageCount[fbdDescrBuf[elem++]];
     offset += index;
