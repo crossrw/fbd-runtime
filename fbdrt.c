@@ -91,14 +91,17 @@ tElemIndex fbdFlagsByteCount;
 //
 char fbdFirstFlag;
 
-#define MAXELEMTYPEVAL 20u
+#define ELEMMASK 0x3F
+#define INVERTFLAG 0x40
+
+#define MAXELEMTYPEVAL 21u
 
 // inputs element count
-ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5};
+ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1};
 // parameters element count
-ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0};
+ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0};
 // saved values count
-ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0};
+ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0};
 
 // --------------------------------------------------------------------------------------------
 
@@ -114,7 +117,10 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     if(!buf) return -1;
     fbdDescrBuf = buf;
 
-    while(!((elem=fbdDescrBuf[fbdElementsCount])&0x80)) {
+    while(1) {
+        elem = fbdDescrBuf[fbdElementsCount];
+        if(elem & 0x80) break;
+        elem &= ELEMMASK;
         if(elem > MAXELEMTYPEVAL) return -1;
         inputs += FBDInputsCount[elem];
         parameters += FBDParametersCount[elem];
@@ -136,8 +142,8 @@ void fbdSetMemory(char *buf)
     tElemIndex i;
     fbdMemoryBuf = (tSignal *)buf;
     // init memory pointers
-    fbdStorageBuf = fbdMemoryBuf+fbdElementsCount;
-    fbdFlagsBuf = (char *)(fbdStorageBuf+fbdStorageCount);
+    fbdStorageBuf = fbdMemoryBuf + fbdElementsCount;
+    fbdFlagsBuf = (char *)(fbdStorageBuf + fbdStorageCount);
     // init memory buf
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
     // restore triggers values from EEPROM
@@ -157,9 +163,9 @@ void fbdDoStep(tSignal period)
     index = 0;
     while(1) {
         element = fbdDescrBuf[index];
-        if(element > 127u) break;                                           // end of schema
+        if(element & 0x80) break;                                           // end of schema
 
-        switch(element) {
+        switch(element & ELEMMASK) {
             case 12:                                                        // elements with timer
             case 17:
             case 18:
@@ -190,7 +196,7 @@ unsigned int fbdInputOffset(tElemIndex index)
     tElemIndex i = 0;
     unsigned int offset = 0;
     //
-    while (i < index) offset += FBDInputsCount[fbdDescrBuf[i++]];
+    while (i < index) offset += FBDInputsCount[fbdDescrBuf[i++] & ELEMMASK];
     return offset;
 }
 // calculating element output value
@@ -205,7 +211,7 @@ void fbdCalcElement(tElemIndex curIndex)
     tSignal s1,s2,s3,s4,v;                      // inputs values
     //
     baseInput = fbdInputOffset(curIndex);       //
-    inputCount = FBDInputsCount[fbdDescrBuf[curIndex]];
+    inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
     //
     do {
         // если у текущего элемента еще есть входы
@@ -224,7 +230,7 @@ void fbdCalcElement(tElemIndex curIndex)
                 curIndex = inpIndex;
                 curInput = 0;
                 baseInput = fbdInputOffset(curIndex);       // элемент сменился, расчет смещения на первый вход элемента
-                inputCount = FBDInputsCount[fbdDescrBuf[curIndex]];
+                inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
             }
             continue;       // следующая итерация цикла
         } else {
@@ -243,7 +249,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = fbdMemoryBuf[fbdInputsBuf[baseInput]];
             }
             // вычисляем значение текущего элемента, результат в s1
-            switch(fbdDescrBuf[curIndex]) {
+            switch(fbdDescrBuf[curIndex] & ELEMMASK) {
                 case 0:                                                                 // OUTPUT PIN
                 case 14:                                                                // OUTPUT VAR
                     break;
@@ -340,10 +346,14 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(v==2) s1 = s3; else
                     if(v==3) s1 = s4;
                     break;
+                case 21:                                                                // ABS
+                    if(s1<0) s1 = -s1;
+                    break;
                 default:
                     s1 = 0;
             }
             setCalcFlag(curIndex);                                  // элемент расчитан, ставим признак
+            if(fbdDescrBuf[curIndex] & INVERTFLAG) s1=s1?0:1;       //
             if(s1 > fbdMemoryBuf[curIndex]) setRiseFlag(curIndex);  // проверка на нарастающий фронт
             fbdMemoryBuf[curIndex] = s1;                            // сохраняю значение в буфере
         }
@@ -352,7 +362,7 @@ void fbdCalcElement(tElemIndex curIndex)
             curIndex = FBDStack[FBDStackPnt].index;         // восстанавливаем родительский элемент
             curInput = FBDStack[FBDStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
             baseInput = fbdInputOffset(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
-            inputCount = FBDInputsCount[fbdDescrBuf[curIndex]];
+            inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
         } else break;                                       // если стек пуст, то расчет завершен
     } while(1);
 }
