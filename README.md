@@ -111,10 +111,10 @@ Traditional, often used element NOT. Includes one input and one output. Truth ta
 </table>
 #### AND
 ```
-    +-----+
-----|  &  |----
-----|     |
-    +-----+
+    +-----+                   +-----+
+----|  &  |----           ----|  &  O----
+----|     |               ----|     |
+    +-----+                   +-----+
 ```
 Element has two inputs and one output. Truth table:
 <table>
@@ -125,10 +125,10 @@ Element has two inputs and one output. Truth table:
 </table>
 #### OR
 ```
-    +-----+
-----|  1  |----
-----|     |
-    +-----+
+    +-----+                   +-----+
+----|  1  |----           ----|  1  O----
+----|     |               ----|     |
+    +-----+                   +-----+
 ```
 Element has two inputs and one output. Truth table:
 <table>
@@ -139,10 +139,10 @@ Element has two inputs and one output. Truth table:
 </table>
 #### XOR
 ```
-    +-----+
-----| =1  |----
-----|     |
-    +-----+
+    +-----+                   +-----+
+----|  =1 |----           ----|  =1 O----
+----|     |               ----|     |
+    +-----+                   +-----+
 ```
 XOR element has two inputs and one output. Truth table:
 <table>
@@ -155,11 +155,11 @@ XOR element has two inputs and one output. Truth table:
 ### Flip-flop
 #### SR latch
 ```
-    +--+----+
-----|R |   Q|----
-    |  |    |
-----|S |    |
-    +--+----+
+    +--+----+                +--+----+
+----|R |   Q|----        ----|R |  Q O----
+    |  |    |                |  |    |
+----|S |    |            ----|S |    |
+    +--+----+                +--+----+
 ```
 SR-latch has two inputs (S and R) and one output (Q).
 While the S and R inputs are both low, feedback maintains the Q output in a constant state. If S (Set) is pulsed high while R (Reset) is held low, then the Q output is forced high, and stays high when S returns to low; similarly, if R is pulsed high while S is held low, then the Q output is forced low, and stays low when R returns to low.
@@ -174,11 +174,11 @@ Truth table:
 At each change its latch value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### D flip-flop
 ```
-    +--+----+
-----|D |   Q|----
-    |  |    |
-----/C |    |
-    +--+----+
+    +--+----+                +--+----+
+----|D |  Q |----        ----|D |  Q O----
+    |  |    |                |  |    |
+----/C |    |            ----/C |    |
+    +--+----+                +--+----+
 ```
 D flip-flop has two inputs (D and C) and one output (Q).
 The D flip-flop captures the value of the D-input at a definite portion of the clock cycle (such as the rising edge of the clock). That captured value becomes the Q output. At other times, the output Q does not change.
@@ -270,11 +270,11 @@ Element is used to integrate the input signal value. Can be used together with a
 ### Other
 #### Timer
 ```
-    +--+----+
-----|D |   Q|----
-    |  |    |
-----|T |    |
-    +--+----+
+    +--+----+                +--+----+
+----|D |  Q |----        ----|D |  Q O----
+    |  |    |                |  |    |
+----|T |    |            ----|T |    |
+    +--+----+                +--+----+
 ```
 Timer - not exactly a traditional element. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table:
 <table>
@@ -285,10 +285,10 @@ Timer - not exactly a traditional element. It can be used as a signal generator 
 </table>
 #### Comparator
 ```
-    +-----+
-----|  >  |----
-----|     |
-    +-----+
+    +-----+                  +-----+
+----|  >  |----          ----|  >  O----
+----|     |              ----|     |
+    +-----+                  +-----+
 ```
 Element compares the signal at its two inputs. Truth table:
 <table>
