@@ -429,10 +429,21 @@ Where: _N_-elements count, _K(i)_-number of inputs of an element __i__, _M(i)_-n
 `END_MARK` is a sign of the end of the list of elements, in addition, it contains information about the size and value of the signal element index. Its value is defined in the file `fbdrt.h` as:
 ```
 #define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
+// bit 0-2: sizeof(tSignal)
+// bit 3-4: sizeof(tElemIndex)
+// bit 5:   reserved
+// bit 6:   reserved
+// bit 7:   1
 ```
 Function `fbdInit()` checks the value of the `END_MARK` before starting the scheme.
 
-Number of inputs and parameters count depend on the element type code. If the element has no inputs or parameters, the values in the array are missing. Summary table of types of elements below:
+Number of inputs and parameters count depend on the element type code. If the element has no inputs or parameters, the values in the array are missing. Code can be written as a bit mask:
+```
+// bit 0-5: code of element type
+// bit 6:   flag of inverse output
+// bit 7:   0
+```
+Summary table of types of elements below:
 <table>
  <tr><td><b>Element</b></td><td><b>Code</b></td><td><b>Code for inverted output </b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
  <tr><td>Output pin</td><td>0</td><td>-</td><td>1</td><td>1</td></tr>
