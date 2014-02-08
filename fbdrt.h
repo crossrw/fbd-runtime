@@ -26,6 +26,12 @@ typedef uint8_t tElemIndex;
 //
 // end element description flag
 #define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
+// END_MARK:
+// bit 0-2: sizeof(tSignal)
+// bit 3-4: sizeof(tElemIndex)
+// bit 5:   reserved
+// bit 6:   reserved
+// bit 7:   1
 
 // need call first, return amount of memory required for calculating
 // if error:
