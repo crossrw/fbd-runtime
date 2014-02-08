@@ -352,8 +352,8 @@ void fbdCalcElement(tElemIndex curIndex)
                 default:
                     s1 = 0;
             }
-            setCalcFlag(curIndex);                                  // элемент расчитан, ставим признак
-            if(fbdDescrBuf[curIndex] & INVERTFLAG) s1=s1?0:1;       //
+            setCalcFlag(curIndex);                                  // set calculated flag
+            if(fbdDescrBuf[curIndex] & INVERTFLAG) s1 = s1?0:1;     // inverse result if need
             if(s1 > fbdMemoryBuf[curIndex]) setRiseFlag(curIndex);  // проверка на нарастающий фронт
             fbdMemoryBuf[curIndex] = s1;                            // сохраняю значение в буфере
         }
@@ -372,7 +372,7 @@ tSignal fbdGetParameter(tElemIndex element)
     tElemIndex elem = 0;
     unsigned int offset = 0;
     //
-    while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++]];
+    while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
     return fbdParametersBuf[offset];
 }
 // get value of elemnt memory
@@ -381,7 +381,7 @@ tSignal fbdGetStorage(tElemIndex element, unsigned char index)
     tElemIndex elem = 0;
     unsigned int offset = 0;
     //
-    while (elem<element) offset += FBDStorageCount[fbdDescrBuf[elem++]];
+    while (elem<element) offset += FBDStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
     return fbdStorageBuf[offset + index];
 }
 // save element memory
@@ -390,7 +390,7 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
     tElemIndex elem = 0;
     unsigned int offset = 0;
     //
-    while (elem < element) offset += FBDStorageCount[fbdDescrBuf[elem++]];
+    while (elem < element) offset += FBDStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
     offset += index;
     if(fbdStorageBuf[offset]!=value){
         fbdStorageBuf[offset]=value;
