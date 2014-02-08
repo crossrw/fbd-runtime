@@ -118,10 +118,10 @@ Traditional, often used element NOT. Includes one input and one output. Truth ta
 ```
 Element has two inputs and one output. Truth table:
 <table>
- <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
- <tr><td>Logical "0"</td><td>Any value</td><td>0</td></tr>
- <tr><td>Any value</td><td>Logical "0"</td><td>0</td></tr>
- <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Any value</td><td>0</td><td>1</td></tr>
+ <tr><td>Any value</td><td>Logical "0"</td><td>0</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
 </table>
 #### OR
 ```
@@ -132,10 +132,10 @@ Element has two inputs and one output. Truth table:
 ```
 Element has two inputs and one output. Truth table:
 <table>
- <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
- <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td></tr>
- <tr><td>Logical "1"</td><td>Any value</td><td>1</td></tr>
- <tr><td>Any value</td><td>Logical "1"</td><td>1</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>Any value</td><td>1</td><td>0</td></tr>
+ <tr><td>Any value</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
 </table>
 #### XOR
 ```
@@ -146,11 +146,11 @@ Element has two inputs and one output. Truth table:
 ```
 XOR element has two inputs and one output. Truth table:
 <table>
- <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td></tr>
- <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td></tr>
- <tr><td>Logical "0"</td><td>Logical "1"</td><td>1</td></tr>
- <tr><td>Logical "1"</td><td>Logical "0"</td><td>1</td></tr>
- <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td></tr>
+ <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td><td>1</td></tr>
+ <tr><td>Logical "0"</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
+ <tr><td>Logical "1"</td><td>Logical "0"</td><td>1</td><td>0</td></tr>
+ <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td><td>1</td></tr>
 </table>
 ### Flip-flop
 #### SR latch
@@ -247,6 +247,13 @@ Element has two inputs and one output. The output value - the value of the signa
  <tr><td>Any negative value</td><td>0</td><td>MIN_SIGNAL</td></tr>
 </table>
 I know that you can not divide by 0. :)
+#### Absolute value
+```
+    +---+
+----|Abs|----
+    +---+
+```
+Output element value is the absolute value of the input signal.
 ### Regulation
 #### PID
 ```
@@ -278,10 +285,10 @@ Element is used to integrate the input signal value. Can be used together with a
 ```
 Timer - not exactly a traditional element. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table:
 <table>
- <tr><td><b>D</b></td><td><b>Сondition</b></td><td><b>Output</b></td></tr>
- <tr><td>Logical "0"</td><td>Any</td><td>0</td></tr>
- <tr><td>Logical "1"</td><td>Time T not expired</td><td>0</td></tr>
- <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td></tr>
+ <tr><td><b>D</b></td><td><b>Сondition</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
+ <tr><td>Logical "0"</td><td>Any</td><td>0</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>Time T not expired</td><td>0</td><td>1</td></tr>
+ <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td><td>0</td></tr>
 </table>
 #### Comparator
 ```
@@ -292,9 +299,9 @@ Timer - not exactly a traditional element. It can be used as a signal generator 
 ```
 Element compares the signal at its two inputs. Truth table:
 <table>
- <tr><td><b>Сondition</b></td><td><b>Output</b></td></tr>
- <tr><td>Input1Val &gt; Input2Val</td><td>1</td></tr>
- <tr><td>Input1Val &lt;= Input2Val</td><td>0</td></tr>
+ <tr><td><b>Сondition</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
+ <tr><td>Input1Val &gt; Input2Val</td><td>1</td><td>0</td></tr>
+ <tr><td>Input1Val &lt;= Input2Val</td><td>0</td><td>1</td></tr>
 </table>
 #### Multiplexer
 ```
@@ -427,28 +434,29 @@ Function `fbdInit()` checks the value of the `END_MARK` before starting the sche
 
 Number of inputs and parameters count depend on the element type code. If the element has no inputs or parameters, the values in the array are missing. Summary table of types of elements below:
 <table>
- <tr><td><b>Element</b></td><td><b>Type code</b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
- <tr><td>Output pin</td><td>0</td><td>1</td><td>1</td></tr>
- <tr><td>Const</td><td>1</td><td>0</td><td>1</td></tr> 
- <tr><td>Logical NOT</td><td>2</td><td>1</td><td>0</td></tr> 
- <tr><td>Logical AND</td><td>3</td><td>2</td><td>0</td></tr> 
- <tr><td>Logical OR</td><td>4</td><td>2</td><td>0</td></tr> 
- <tr><td>Logical XOR</td><td>5</td><td>2</td><td>0</td></tr> 
- <tr><td>SR latch</td><td>6</td><td>2</td><td>0</td></tr> 
- <tr><td>D flip-flop</td><td>7</td><td>2</td><td>0</td></tr> 
- <tr><td>Arithmetical ADD</td><td>8</td><td>2</td><td>0</td></tr> 
- <tr><td>Arithmetical SUB</td><td>9</td><td>2</td><td>0</td></tr> 
- <tr><td>Arithmetical MUL</td><td>10</td><td>2</td><td>0</td></tr> 
- <tr><td>Arithmetical DIV</td><td>11</td><td>2</td><td>0</td></tr> 
- <tr><td>Timer</td><td>12</td><td>2</td><td>0</td></tr> 
- <tr><td>Comparator</td><td>13</td><td>2</td><td>0</td></tr> 
- <tr><td>Output var</td><td>14</td><td>1</td><td>1</td></tr> 
- <tr><td>Input pin</td><td>15</td><td>0</td><td>1</td></tr> 
- <tr><td>Input var</td><td>16</td><td>0</td><td>1</td></tr> 
- <tr><td>PID regulator</td><td>17</td><td>4</td><td>0</td></tr> 
- <tr><td>Integrator</td><td>18</td><td>3</td><td>0</td></tr> 
- <tr><td>Up-down counter</td><td>19</td><td>3</td><td>0</td></tr>
- <tr><td>Multiplexer</td><td>20</td><td>5</td><td>0</td></tr>
+ <tr><td><b>Element</b></td><td><b>Code</b></td><td><b>Code for inverted output </b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
+ <tr><td>Output pin</td><td>0</td><td>-</td><td>1</td><td>1</td></tr>
+ <tr><td>Const</td><td>1</td><td>-</td><td>0</td><td>1</td></tr> 
+ <tr><td>Logical NOT</td><td>2</td><td>-</td><td>1</td><td>0</td></tr> 
+ <tr><td>Logical AND</td><td>3</td><td>67</td><td>2</td><td>0</td></tr> 
+ <tr><td>Logical OR</td><td>4</td><td>68</td><td>2</td><td>0</td></tr> 
+ <tr><td>Logical XOR</td><td>5</td><td>69</td><td>2</td><td>0</td></tr> 
+ <tr><td>SR latch</td><td>6</td><td>70</td><td>2</td><td>0</td></tr> 
+ <tr><td>D flip-flop</td><td>7</td><td>71</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical ADD</td><td>8</td><td>-</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical SUB</td><td>9</td><td>-</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical MUL</td><td>10</td><td>-</td><td>2</td><td>0</td></tr> 
+ <tr><td>Arithmetical DIV</td><td>11</td><td>-</td><td>2</td><td>0</td></tr> 
+ <tr><td>Timer</td><td>12</td><td>76</td><td>2</td><td>0</td></tr> 
+ <tr><td>Comparator</td><td>13</td><td>77</td><td>2</td><td>0</td></tr> 
+ <tr><td>Output var</td><td>14</td><td>-</td><td>1</td><td>1</td></tr> 
+ <tr><td>Input pin</td><td>15</td><td>-</td><td>0</td><td>1</td></tr> 
+ <tr><td>Input var</td><td>16</td><td>-</td><td>0</td><td>1</td></tr> 
+ <tr><td>PID regulator</td><td>17</td><td>-</td><td>4</td><td>0</td></tr> 
+ <tr><td>Integrator</td><td>18</td><td>-</td><td>3</td><td>0</td></tr> 
+ <tr><td>Up-down counter</td><td>19</td><td>-</td><td>3</td><td>0</td></tr>
+ <tr><td>Multiplexer</td><td>20</td><td>-</td><td>5</td><td>0</td></tr>
+ <tr><td>Abs value</td><td>21</td><td>-</td><td>1</td><td>0</td></tr>
 </table>
 #### Example
 For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
