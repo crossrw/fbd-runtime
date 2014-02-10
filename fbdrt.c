@@ -316,10 +316,10 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(!fbdGetStorage(curIndex, 0)) {           // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s3);         // установка таймера
                         s2 = s1 - s2;                           // ошибка PID
-                        if(!fbdFirstFlag) v = ((long)(s1 - fbdGetStorage(curIndex, 1)) * 128)/s3; else v = 0;    // скорость изменения входной величины
+                        if(!fbdFirstFlag) v = ((tLongSignal)(s1 - fbdGetStorage(curIndex, 1)) * 128)/s3; else v = 0;    // скорость изменения входной величины
                         fbdSetStorage(curIndex, 1, s1);                                                          // сохранение прошлого входного значения
                         if((v < intAbs(s2))||(v > intAbs(s2*3))) {
-                            s1= -(long)s4*(s2*2 + v) / 128;
+                            s1= -(tLongSignal)s4*(s2*2 + v) / 128;
                         } else s1 = fbdMemoryBuf[curIndex];
                     } else s1 = fbdMemoryBuf[curIndex];
                     break;
