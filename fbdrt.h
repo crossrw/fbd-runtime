@@ -13,6 +13,7 @@
 typedef unsigned char tFBDStackPnt;
 // data type for FBD signal
 typedef int16_t tSignal;
+typedef long tLongSignal
 #define MAX_SIGNAL INT16_MAX
 #define MIN_SIGNAL INT16_MIN
 // data type for element index
