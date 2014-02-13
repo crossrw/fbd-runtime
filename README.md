@@ -30,11 +30,13 @@ Example of a simple scheme is shown below:
 
 Key features
 ------------
-* Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb.
-* The algorithm is optimized for use in embedded controllers: PIC, AVR, ARM etc. Calculating does not use recursion, built data stack is used very sparingly.
-* Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded.
 * Library has no binding to a specific hardware and can be easily ported to any platform for which there is a C compiler.
-* Support for storing intermediate results in EEPROM (for flip-flop, timers etc.), reading and saving values of network variables.
+* The algorithm is optimized for use in embedded controllers: PIC, AVR, ARM etc. Calculating does not use recursion, built data stack is used very sparingly.
+* Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb.
+* Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded.
+* Support for storing intermediate results in EEPROM (for flip-flop, timers etc).
+* Support network variables (ModBus or something like that).
+* Basic HMI support.
 
 ![fbd struct](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/struct.png)
 
