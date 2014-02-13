@@ -535,7 +535,32 @@ The library contains basic functions support HMI. This can be used if your PLC h
 ![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu2.png)
 
 Watchpoints is used to display the values of the signals for operator. Setpoints are used to set the reference values, used in the operation of the circuit. Each watchpoint and setpoint has the associated text caption, that can be displayed on LCD. Moreover, for setpoints are stored maximum and minimum values of the signal that it can receive.
-
+To get the value of the watchpoint, use the function:
+```
+bool fbdHMIGetWP(tSignal index, tHMIdata *pnt);
+// index - number of watchpoint (0..watch points count-1)
+// pnt - pointer to data struct:
+typedef struct {
+    tSignal value;              // current point value
+    tSignal lowlimit;           // low limit for value (only for setpoints)
+    tSignal upperLimit;         // upper limit for value (only for setpoints)
+    DESCR_MEM char *caption;    // pointer to text caption (asciiz)
+} tHMIdata;
+```
+If the point exists, the function returns `true` and the data in the structure of `pnt`, otherwise the function returns a value `false`. Items `lowlimit` and `upperlimit` not used.
+To get the value of the setpoint, use the function:
+```
+bool fbdHMIGetSP(tSignal index, tHMIdata *pnt);
+// index - number of setpoint (0..set points count-1)
+// pnt - pointer to data structure
+```
+If the point exists, the function returns `true` and the data in the structure of `pnt`, otherwise the function returns a value `false`. Watchpoints and setpoints numbering starts with 0.
+To set the new setpoint value, use the function:
+```
+void fbdHMISetSP(tSignal index, tSignal value);
+// index - number of setpoint (0..set points count-1)
+// value - new value of setpoint
+```
 Current status
 ==============
 It's works. Now the library is used in the finished projects and does not contain know the problems. Plans for fbdrt development:
