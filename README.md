@@ -525,7 +525,7 @@ The library contains basic functions support HMI. This can be used if your PLC h
  * view values of schema points
  * set the values of set points
 
-![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu1.png)
+![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu2.png)
 
 Current status
 ==============
