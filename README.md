@@ -470,6 +470,8 @@ Summary table of types of elements below:
  <tr><td>Up-down counter</td><td>19</td><td>-</td><td>3</td><td>0</td></tr>
  <tr><td>Multiplexer</td><td>20</td><td>-</td><td>5</td><td>0</td></tr>
  <tr><td>Abs value</td><td>21</td><td>-</td><td>1</td><td>0</td></tr>
+ <tr><td>WatchPoint</td><td>22</td><td>-</td><td>1</td><td>1</td></tr>
+ <tr><td>SetPoint</td><td>23</td><td>-</td><td>1</td><td>3</td></tr>
 </table>
 #### Example
 For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
@@ -522,10 +524,12 @@ Some elements of the schemes use time. For each such element library organizes i
 Human machine interface (HMI)
 =============================
 The library contains basic functions support HMI. This can be used if your PLC has a character display (LCD). You can make alphanumeric and graphical menu with which to perform the following functions:
- * view values of schema points
- * set the values of set points
+ * View values of schema points (`Watchpoints`)
+ * Set the values of set points (`Setpoints`)
 
 ![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu2.png)
+
+Watchpoints is used to display the values of the signals for operator. Setpoints are used to set the reference values, used in the operation of the circuit. Each watchpoint and setpoint has the associated text string, that can be displayed on LCD. Moreover, for setpoints are stored maximum and minimum values of the signal that it can receive.
 
 Current status
 ==============
