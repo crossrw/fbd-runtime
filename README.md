@@ -524,8 +524,8 @@ Human machine interface (HMI)
 The library contains basic functions support HMI. This can be used if your PLC has a character display (LCD). You can make alphanumeric and graphical menu with which to perform the following functions:
  * view values of schema points
  * set the values of set points
- * 
-![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu.png)
+
+![fbdmenu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu.png)
 
 Current status
 ==============
