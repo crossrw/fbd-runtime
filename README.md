@@ -425,6 +425,11 @@ The format of the array shown in the table below:
  <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 2 of the element N</td></tr>
  <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
  <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(N) of the element N</td></tr>
+ <tr><td></td><td>variable</td><td>1..255</td><td>chars of caption 1</td></tr>
+ <tr><td></td><td>1</td><td>0</td><td>end of caption 1</td></tr>
+ <tr><td></td><td>variable</td><td>1..255</td><td>chars of caption 2</td></tr>
+ <tr><td></td><td>1</td><td>0</td><td>end of caption 2</td></tr>
+ <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
 </table>
 Where: _N_-elements count, _K(i)_-number of inputs of an element __i__, _M(i)_-number of parameters of an element __i__.
 
@@ -523,13 +528,13 @@ Each call results in the calculation of all the items and setting values of all 
 Some elements of the schemes use time. For each such element library organizes independent timer value is stored in RAM. Timers used to store the type `tSignal`.  Timer values changes by `period` every time the function `fbdDoStep(tSignal period)` is called. Time can be expressed in any units: sec, ms, &micro;s. Unit selection depends on the time scale in which the PLC should work. In my opinion, a decent selection of milliseconds for most cases.
 Human machine interface (HMI)
 =============================
-The library contains basic functions support HMI. This can be used if your PLC has a character display (LCD). You can make alphanumeric and graphical menu with which to perform the following functions:
+The library contains basic functions support HMI. This can be used if your PLC has a display (LCD). You can make character or graphical menu with which to perform the following functions:
  * View values of schema points (`Watchpoints`)
  * Set the values of set points (`Setpoints`)
 
 ![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu2.png)
 
-Watchpoints is used to display the values of the signals for operator. Setpoints are used to set the reference values, used in the operation of the circuit. Each watchpoint and setpoint has the associated text string, that can be displayed on LCD. Moreover, for setpoints are stored maximum and minimum values of the signal that it can receive.
+Watchpoints is used to display the values of the signals for operator. Setpoints are used to set the reference values, used in the operation of the circuit. Each watchpoint and setpoint has the associated text caption, that can be displayed on LCD. Moreover, for setpoints are stored maximum and minimum values of the signal that it can receive.
 
 Current status
 ==============
