@@ -525,6 +525,8 @@ The library contains basic functions support HMI. This can be used if your PLC h
  * view values of schema points
  * set the values of set points
 
+![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu.png)
+
 Current status
 ==============
 It's works. Now the library is used in the finished projects and does not contain know the problems. Plans for fbdrt development:
