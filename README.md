@@ -475,8 +475,8 @@ Summary table of types of elements below:
  <tr><td>Up-down counter</td><td>19</td><td>-</td><td>3</td><td>0</td></tr>
  <tr><td>Multiplexer</td><td>20</td><td>-</td><td>5</td><td>0</td></tr>
  <tr><td>Abs value</td><td>21</td><td>-</td><td>1</td><td>0</td></tr>
- <tr><td>WatchPoint</td><td>22</td><td>-</td><td>1</td><td>1</td></tr>
- <tr><td>SetPoint</td><td>23</td><td>-</td><td>1</td><td>3</td></tr>
+ <tr><td>WatchPoint</td><td>22</td><td>-</td><td>1</td><td>0</td></tr>
+ <tr><td>SetPoint</td><td>23</td><td>-</td><td>1</td><td>2</td></tr>
 </table>
 #### Example
 For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
