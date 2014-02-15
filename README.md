@@ -535,6 +535,9 @@ The library contains basic functions support HMI. This can be used if your PLC h
 ![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu2.png)
 
 Watchpoints is used to display the values of the signals for operator. Setpoints are used to set the reference values, used in the operation of the circuit. Each watchpoint and setpoint has the associated text caption, that can be displayed on LCD. Moreover, for setpoints are stored maximum and minimum values of the signal that it can receive.
+
+![fbd menu2](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu3.png)
+
 To get the value of the watchpoint, use the function:
 ```
 bool fbdHMIGetWP(tSignal index, tHMIdata *pnt);
