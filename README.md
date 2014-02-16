@@ -501,6 +501,9 @@ Bytes description:
 </table>
 Execution
 =========
+
+![fbd alg](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/alg.png)
+
 ### Initialization
 Initialization is performed once at the beginning. Initialization may be performed again in the case of change circuit or a PLC reset. To initialize you must first call the function:
 ```
