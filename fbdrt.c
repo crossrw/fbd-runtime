@@ -27,9 +27,12 @@ extern void FBDsetProc(char type, tSignal index, tSignal *value);
 // -----------------------------------------------------------------------------
 
 void fbdCalcElement(tElemIndex index);
-tSignal fbdGetParameter(tElemIndex element);
+tSignal fbdGetParameter(tElemIndex element, unsigned char index);
 tSignal fbdGetStorage(tElemIndex element, unsigned char index);
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
+#ifdef USE_HMI
+DESCR_MEM char * fbdGetCaption(tElemIndex index);
+#endif // USE_HMI
 
 // stack calculating item
 typedef struct {
@@ -64,6 +67,14 @@ DESCR_MEM tSignal *fbdParametersBuf;
 //  ParameterOfElement    <- parameter of element
 //  ParameterOfElement
 //  ...
+#ifdef USE_HMI
+// HMI captions
+DESCR_MEM char *fbdCaptionsBuf;
+//  text, 0               <- captions
+//  text, 0
+//  ...
+#endif // USE_HMI
+
 // ----------------------------------------------------------
 // calculating data array (only RAM)
 tSignal *fbdMemoryBuf;
@@ -94,14 +105,14 @@ char fbdFirstFlag;
 #define ELEMMASK 0x3F
 #define INVERTFLAG 0x40
 
-#define MAXELEMTYPEVAL 21u
+#define MAXELEMTYPEVAL 23u
 
 // inputs element count
-ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1};
+ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0};
 // parameters element count
-ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0};
+ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2};
 // saved values count
-ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0};
+ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0,0,1};
 
 // --------------------------------------------------------------------------------------------
 
@@ -132,6 +143,9 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     // calc pointers
     fbdInputsBuf = (DESCR_MEM tElemIndex *)(fbdDescrBuf + fbdElementsCount + 1);
     fbdParametersBuf = (DESCR_MEM tSignal *)(fbdInputsBuf + inputs);
+#ifdef USE_HMI
+    fbdCaptionsBuf = (DESCR_MEM char *)(fbdParametersBuf + parameters);
+#endif // USE_HMI
     //
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&0x03)?1:0);
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount;
@@ -179,15 +193,91 @@ void fbdDoStep(tSignal period)
             case 0:                                                         // output elements
             case 14:
                 fbdCalcElement(index);
-                param = fbdGetParameter(index);
+                param = fbdGetParameter(index, 0);
                 FBDsetProc(element?1:0, param, &fbdMemoryBuf[index]);       // set variable or output pin value
+                break;
+            case 22:                                                        // watch point
+                fbdCalcElement(index);
                 break;
         }
         index++;
     }
     fbdFirstFlag = 0;
 }
-
+//
+#ifdef USE_HMI
+bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex)
+{
+    unsigned char elem;
+    //
+    *elemIndex = 0;
+    while(1) {
+        elem = fbdDescrBuf[*elemIndex];
+        if(elem & 0x80) return false;
+        if(elem == type) {
+                if(index) index--; else break;
+        }
+        (*elemIndex)++;
+    }
+    return true;
+}
+// HMI functions
+// -------------------------------------------------------------------------------------------------------
+// get Setting Point
+bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
+{
+    tElemIndex elemIndex;
+    //
+    if(!fbdGetElementIndex(index, 23, &elemIndex)) return false;
+    //
+    (*pnt).value = fbdMemoryBuf[elemIndex];
+    (*pnt).lowlimit = fbdGetParameter(elemIndex, 0);
+    (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
+    (*pnt).caption = fbdGetCaption(elemIndex);
+    return true;
+}
+// set Setting Point
+void fbdHMIsetSP(tSignal index, tSignal value)
+{
+    tElemIndex elemIndex = 0;
+    //
+    if(!fbdGetElementIndex(index, 23, &elemIndex)) return;
+    //
+    if(fbdMemoryBuf[elemIndex] != value) fbdSetStorage(elemIndex, 0, value);
+}
+// get Watch Point
+bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
+{
+    tElemIndex elemIndex = 0;
+    //
+    if(!fbdGetElementIndex(index, 22, &elemIndex)) return false;
+    //
+    (*pnt).value = fbdMemoryBuf[elemIndex];
+    (*pnt).caption = fbdGetCaption(elemIndex);
+    return true;
+}
+// get pointer to caption
+DESCR_MEM char * fbdGetCaption(tElemIndex elemIndex)
+{
+    tElemIndex captionIndex, index;
+    unsigned int offset;
+    //
+    index = 0;
+    captionIndex = 0;
+    while(index < elemIndex) {
+        switch(fbdDescrBuf[index++] & ELEMMASK) {
+            case 22:
+            case 23:
+                captionIndex++;
+                break;
+        }
+    }
+    //
+    offset = 0;
+    while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
+    return &fbdCaptionsBuf[offset];
+}
+#endif // USE_HMI
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
 // calc offset of first element input
@@ -203,12 +293,17 @@ unsigned int fbdInputOffset(tElemIndex index)
 void fbdCalcElement(tElemIndex curIndex)
 {
     tFBDStackItem FBDStack[FBDSTACKSIZE];       // stack to calculate
-    tFBDStackPnt FBDStackPnt = 0;               // stack pointer
-    unsigned char curInput = 0;                 // current input of element
+    tFBDStackPnt FBDStackPnt;                   // stack pointer
+    unsigned char curInput;                     // current input of element
     unsigned char inputCount;                   // number of inputs of the current element
     unsigned int baseInput;                     //
     tElemIndex inpIndex;
     tSignal s1,s2,s3,s4,v;                      // inputs values
+    //
+    if(getCalcFlag(curIndex)) return;           // element already calculated
+    //
+    FBDStackPnt = 0;
+    curInput = 0;
     //
     baseInput = fbdInputOffset(curIndex);       //
     inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
@@ -252,9 +347,10 @@ void fbdCalcElement(tElemIndex curIndex)
             switch(fbdDescrBuf[curIndex] & ELEMMASK) {
                 case 0:                                                                 // OUTPUT PIN
                 case 14:                                                                // OUTPUT VAR
+                case 22:                                                                // HMI watchpoint
                     break;
                 case 1:                                                                 // CONST
-                    s1 = fbdGetParameter(curIndex);
+                    s1 = fbdGetParameter(curIndex, 0);
                     break;
                 case 2:                                                                 // NOT
                     s1 = s1?0:1;
@@ -307,10 +403,10 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = s1 > s2;
                     break;
                 case 15:
-                    s1 = FBDgetProc(0, fbdGetParameter(curIndex));                      // INPUT PIN
+                    s1 = FBDgetProc(0, fbdGetParameter(curIndex, 0));                   // INPUT PIN
                     break;
                 case 16:
-                    s1 = FBDgetProc(1, fbdGetParameter(curIndex));                      // INPUT VAR
+                    s1 = FBDgetProc(1, fbdGetParameter(curIndex, 0));                   // INPUT VAR
                     break;
                 case 17:                                                                // PID
                     if(!fbdGetStorage(curIndex, 0)) {           // проверка срабатывания таймера
@@ -349,8 +445,9 @@ void fbdCalcElement(tElemIndex curIndex)
                 case 21:                                                                // ABS
                     if(s1<0) s1 = -s1;
                     break;
-                default:
-                    s1 = 0;
+                case 23:                                                                // HMI setpoint
+                    s1 = fbdGetStorage(curIndex, 0);
+                    break;
             }
             setCalcFlag(curIndex);                                  // set calculated flag
             if(fbdDescrBuf[curIndex] & INVERTFLAG) s1 = s1?0:1;     // inverse result if need
@@ -367,13 +464,13 @@ void fbdCalcElement(tElemIndex curIndex)
     } while(1);
 }
 // get value of element parameter
-tSignal fbdGetParameter(tElemIndex element)
+tSignal fbdGetParameter(tElemIndex element, unsigned char index)
 {
     tElemIndex elem = 0;
     unsigned int offset = 0;
     //
     while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
-    return fbdParametersBuf[offset];
+    return fbdParametersBuf[offset + index];
 }
 // get value of elemnt memory
 tSignal fbdGetStorage(tElemIndex element, unsigned char index)
