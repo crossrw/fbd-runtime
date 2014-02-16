@@ -10,6 +10,8 @@ FBD - one of the programming languages described in the international standard I
 
 FBD editor and simulator can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2/fbd2setup.exe
 
+A short video about the use of schema editor: http://youtu.be/KEGXHd6FIEI
+
 -------------------------------------------------------------------------------------
 Appointment
 ===========
