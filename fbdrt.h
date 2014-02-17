@@ -1,8 +1,7 @@
 #ifndef FBDRT_H
 #define	FBDRT_H
 
-#include <stdint.h>        /* For uint8_t definition */
-#include <stdbool.h>       /* For true/false definition */
+#include <stdbool.h>       // For true/false definition
 
 // = begin tuning ==========================================================
 // stack size fo calculating, one stack element size =(sizeof(tElemIndex)+1) байт
@@ -10,21 +9,29 @@
 // data type for stack pointer
 typedef unsigned char tFBDStackPnt;
 // data type for FBD signal
-typedef int16_t tSignal;
-typedef long tLongSignal;
+typedef signed short tSignal;
 #define MAX_SIGNAL INT16_MAX
 #define MIN_SIGNAL INT16_MIN
+//
+typedef long tLongSignal;
 // data type for element index
-typedef uint8_t tElemIndex;
+typedef unsigned char tElemIndex;
 //
 // data in ROM/FLASH
 #define ROM_CONST const
 // schema description
 #define DESCR_MEM const
-// use HMI functions
+//
+// needed if you use HMI functions
 #define USE_HMI
+//
+// speed optimization reduces the calculation time, but increases
+// the size of memory (RAM) required
+#define SPEED_OPT
 
 // = end tuning ===========================================================
+//
+typedef unsigned short tOffset;
 //
 // end element description flag
 #define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
@@ -37,7 +44,7 @@ typedef uint8_t tElemIndex;
 
 // Initialization functions
 // -------------------------------------------------------------------------------------------------------
-// need call first, return amount of memory required for calculating or (if error) negative value:
+// need call first, return amount of memory (RAM) required for calculating or (if error) negative value:
 // -1 - invalid element code in description
 // -2 - wrong sizeof tSignal or tElementIndex
 int fbdInit(DESCR_MEM unsigned char *descr);
@@ -65,6 +72,6 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt);
 void fbdHMIsetSP(tSignal index, tSignal value);
 // get Watch Point
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt);
-#endif  // USE_HMI
+#endif // USE_HMI
 
 #endif	// FBDRT_H
