@@ -358,8 +358,13 @@ Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allo
 ```
 Inclusion of a definition `SPEED_OPT` reduces the calculation time is approximately 6 times (for medium and large schemes), the memory requirement increases by about 3 times.
 
-Disabling definition `USE_HMI` allow slightly reduce the size of the library code. This can be useful if your PLC is not equipped with an LCD indicator. Be careful: if you disable, setpoints can return uncertain data !
-
+Disabling definition `USE_HMI` allow slightly reduce the size of the library code. This can be useful if your PLC is not equipped with an LCD indicator. Be careful: if you disable, setpoints can return uncertain data ! Example:
+```
+// needed if you use HMI functions
+#define USE_HMI
+// speed optimization reduces the calculation time, but increases the size of memory (RAM) required
+#define SPEED_OPT
+```
 Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored eeprom (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or eeprom values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
   * For discrete inputs and outputs use the values `0` and `1`.
   * For analogue inputs and outputs use the values expressed in engineering units, possibly with some decimal factor. For this, in some cases, the conversion function should perform PLC raw input data to engineering units and vice versa. For example the value of temperature sensor +10.5 C must be converted to a number 105.
