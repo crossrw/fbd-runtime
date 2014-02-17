@@ -1,4 +1,4 @@
-#include <stdint.h>        /* For uint8_t definition */
+#include <stdint.h>
 #include <stdbool.h>       /* For true/false definition */
 
 #include "string.h"
@@ -83,22 +83,49 @@ tSignal *fbdMemoryBuf;
 //  OutputValue1
 //  ...
 //  OutputValueN
-// saving values
+//
+// storage values
 tSignal *fbdStorageBuf;
 //  Storage0
 //  Storage1
 //  ...
 //  StorageN
-// flags (calculated and signal rising)
+//
+// flags, 2 bits for each element (calculated and signal rising)
 char *fbdFlagsBuf;
 //  Flags0
 //  Flags1
 //  ...
 //  FlagsN
+#ifdef SPEED_OPT
+tOffset *inputOffsets;
+//  Offset of input 0 of element 0
+//  Offset of input 0 of element 1
+//  ...
+//  Offset of input 0 of element N
+tOffset *parameterOffsets;
+//  Offset of parameter 0 of element 0
+//  Offset of parameter 0 of element 1
+//  ...
+//  Offset of parameter 0 of element N
+tOffset *storageOffsets;
+//  Offset of storage 0 of element 0
+//  Offset of storage 0 of element 1
+//  ...
+//  Offset of storage 0 of element N
+#ifdef USE_HMI
+DESCR_MEM char **captionOffsets;
+//  Offset of storage 0 of element 0
+
+#endif // USE_HMI
+#endif // SPEED_OPT
 
 tElemIndex fbdElementsCount;
 tElemIndex fbdStorageCount;
 tElemIndex fbdFlagsByteCount;
+#if defined(SPEED_OPT) && defined(USE_HMI)
+tElemIndex fbdCaptionsCount;
+#endif // defined
 //
 char fbdFirstFlag;
 
@@ -118,12 +145,15 @@ ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,
 
 int fbdInit(DESCR_MEM unsigned char *buf)
 {
-    int inputs = 0;
-    int parameters = 0;
+    tOffset inputs = 0;
+    tOffset parameters = 0;
     unsigned char elem;
     //
     fbdElementsCount = 0;
     fbdStorageCount = 0;
+#if defined(SPEED_OPT) && defined(USE_HMI)
+    fbdCaptionsCount = 0;
+#endif // USE_HMI
     //
     if(!buf) return -1;
     fbdDescrBuf = buf;
@@ -136,6 +166,9 @@ int fbdInit(DESCR_MEM unsigned char *buf)
         inputs += FBDInputsCount[elem];
         parameters += FBDParametersCount[elem];
         fbdStorageCount += FBDStorageCount[elem];
+#if defined(SPEED_OPT) && defined(USE_HMI)
+        if((elem == 22)||(elem == 23)) fbdCaptionsCount++;
+#endif // USE_HMI
         fbdElementsCount++;
     }
     // check tSignal size
@@ -146,14 +179,30 @@ int fbdInit(DESCR_MEM unsigned char *buf)
 #ifdef USE_HMI
     fbdCaptionsBuf = (DESCR_MEM char *)(fbdParametersBuf + parameters);
 #endif // USE_HMI
+    fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&3)?1:0);
     //
-    fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&0x03)?1:0);
+#ifdef SPEED_OPT
+#ifdef USE_HMI
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset) + fbdCaptionsCount*sizeof(char *);
+#else  // USE_HMI
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset);
+#endif // USE_HMI
+#else  // SPEED_OPT
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount;
+#endif // SPEED_OPT
 }
 
 void fbdSetMemory(char *buf)
 {
     tElemIndex i;
+#ifdef USE_HMI
+    tHMIdata HMIdata;
+#endif // USE_HMI
+#ifdef SPEED_OPT
+    tOffset curInputOffset;
+    tOffset curParameterOffset;
+    tOffset curStorageOffset;
+#endif // SPEED_OPT
     fbdMemoryBuf = (tSignal *)buf;
     // init memory pointers
     fbdStorageBuf = fbdMemoryBuf + fbdElementsCount;
@@ -162,7 +211,46 @@ void fbdSetMemory(char *buf)
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
     // restore triggers values from EEPROM
     for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(2, i);
+#ifdef SPEED_OPT
+    // init fast access buffers
+    inputOffsets = (tOffset *)(fbdFlagsBuf + fbdFlagsByteCount);
+    parameterOffsets = inputOffsets + fbdElementsCount;
+    storageOffsets = parameterOffsets + fbdElementsCount;
     //
+    curInputOffset = 0;
+    curParameterOffset = 0;
+    curStorageOffset = 0;
+    //
+    for(i=0;i < fbdElementsCount;i++) {
+        *(inputOffsets + i) = curInputOffset;
+        *(parameterOffsets + i) = curParameterOffset;
+        *(storageOffsets + i) = curStorageOffset;
+        //
+        curInputOffset += FBDInputsCount[fbdDescrBuf[i] & ELEMMASK];
+        curParameterOffset += FBDParametersCount[fbdDescrBuf[i] & ELEMMASK];
+        curStorageOffset += FBDStorageCount[fbdDescrBuf[i] & ELEMMASK];
+    }
+#ifdef USE_HMI
+    // init fast access caption buffer
+    captionOffsets = (DESCR_MEM char **)(storageOffsets + fbdElementsCount);
+    //
+    curInputOffset = 0;
+    for(i = 0;i < fbdCaptionsCount;i++) {
+        *(captionOffsets + i) = fbdCaptionsBuf + curInputOffset;
+        while(fbdCaptionsBuf[curInputOffset++]);
+    }
+#endif // USE_HMI
+#endif // SPEED_OPT
+    //
+#ifdef USE_HMI
+    // HMI setpoints initialization
+    i = 0;
+    while(fbdHMIgetSP(i, &HMIdata)) {
+        if(HMIdata.value > HMIdata.upperLimit) fbdHMIsetSP(i, HMIdata.upperLimit); else
+        if(HMIdata.value < HMIdata.lowlimit) fbdHMIsetSP(i, HMIdata.lowlimit);
+        i++;
+    }
+#endif // USE_HMI
     fbdFirstFlag = 1;
 }
 
@@ -196,9 +284,11 @@ void fbdDoStep(tSignal period)
                 param = fbdGetParameter(index, 0);
                 FBDsetProc(element?1:0, param, &fbdMemoryBuf[index]);       // set variable or output pin value
                 break;
+#ifdef USE_HMI
             case 22:                                                        // watch point
                 fbdCalcElement(index);
                 break;
+#endif // USE_HMI
         }
         index++;
     }
@@ -260,7 +350,6 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 DESCR_MEM char * fbdGetCaption(tElemIndex elemIndex)
 {
     tElemIndex captionIndex, index;
-    unsigned int offset;
     //
     index = 0;
     captionIndex = 0;
@@ -273,21 +362,33 @@ DESCR_MEM char * fbdGetCaption(tElemIndex elemIndex)
         }
     }
     //
-    offset = 0;
+#ifdef SPEED_OPT
+    return *(captionOffsets + captionIndex);
+#else
+    tOffset offset = 0;
     while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
     return &fbdCaptionsBuf[offset];
+#endif // SPEED_OPT
 }
 #endif // USE_HMI
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
 // calc offset of first element input
-unsigned int fbdInputOffset(tElemIndex index)
+#ifdef SPEED_OPT
+inline tOffset fbdInputOffset(tElemIndex index)
+#else
+tOffset fbdInputOffset(tElemIndex index)
+#endif // SPEED_OPT
 {
+#ifdef SPEED_OPT
+    return *(inputOffsets + index);
+#else
     tElemIndex i = 0;
-    unsigned int offset = 0;
+    tOffset offset = 0;
     //
     while (i < index) offset += FBDInputsCount[fbdDescrBuf[i++] & ELEMMASK];
     return offset;
+#endif // SPEED_OPT
 }
 // calculating element output value
 void fbdCalcElement(tElemIndex curIndex)
@@ -296,7 +397,7 @@ void fbdCalcElement(tElemIndex curIndex)
     tFBDStackPnt FBDStackPnt;                   // stack pointer
     unsigned char curInput;                     // current input of element
     unsigned char inputCount;                   // number of inputs of the current element
-    unsigned int baseInput;                     //
+    tOffset baseInput;                          //
     tElemIndex inpIndex;
     tSignal s1,s2,s3,s4,v;                      // inputs values
     //
@@ -446,7 +547,9 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(s1<0) s1 = -s1;
                     break;
                 case 23:                                                                // HMI setpoint
+#ifdef USE_HMI
                     s1 = fbdGetStorage(curIndex, 0);
+#endif // USE_HMI
                     break;
             }
             setCalcFlag(curIndex);                                  // set calculated flag
@@ -466,31 +569,43 @@ void fbdCalcElement(tElemIndex curIndex)
 // get value of element parameter
 tSignal fbdGetParameter(tElemIndex element, unsigned char index)
 {
+#ifdef SPEED_OPT
+    return fbdParametersBuf[*(parameterOffsets + element) + index];
+#else
     tElemIndex elem = 0;
-    unsigned int offset = 0;
+    tOffset offset = 0;
     //
     while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
     return fbdParametersBuf[offset + index];
+#endif // SPEED_OPT
 }
 // get value of elemnt memory
 tSignal fbdGetStorage(tElemIndex element, unsigned char index)
 {
+#ifdef SPEED_OPT
+    return fbdStorageBuf[*(storageOffsets + element) + index];
+#else
     tElemIndex elem = 0;
-    unsigned int offset = 0;
+    tOffset offset = 0;
     //
     while (elem<element) offset += FBDStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
     return fbdStorageBuf[offset + index];
+#endif // SPEED_OPT
 }
 // save element memory
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
+    tOffset offset = 0;
+#ifdef SPEED_OPT
+    offset = *(storageOffsets + element) + index;
+#else
     tElemIndex elem = 0;
-    unsigned int offset = 0;
     //
     while (elem < element) offset += FBDStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
     offset += index;
-    if(fbdStorageBuf[offset]!=value){
-        fbdStorageBuf[offset]=value;
+#endif // SPEED_OPT
+    if(fbdStorageBuf[offset] != value){
+        fbdStorageBuf[offset] = value;
         FBDsetProc(2,offset,&fbdStorageBuf[offset]);    // save to eeprom
     }
 }
