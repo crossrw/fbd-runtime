@@ -356,7 +356,7 @@ Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allo
 // schema description
 #define DESCR_MEM const
 ```
-Inclusion of a definition `SPEED_OPT` reduces the calculation time is approximately 6 times (for medium and large schemes), the memory requirement increases by about 3 times.
+Inclusion of a definition `SPEED_OPT` reduces the calculation time is approximately 6 times (for medium and large schemes), the memory requirement increases by about 3 times. When you enable `SPEED_OPT`, at initialization time performed preliminary calculations pointers, that reduce runtime.
 
 Disabling definition `USE_HMI` allow slightly reduce the size of the library code. This can be useful if your PLC is not equipped with an LCD indicator. Be careful: if you disable, setpoints can return uncertain data ! Example:
 ```
