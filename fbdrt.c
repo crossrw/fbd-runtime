@@ -30,9 +30,9 @@ void fbdCalcElement(tElemIndex index);
 tSignal fbdGetParameter(tElemIndex element, unsigned char index);
 tSignal fbdGetStorage(tElemIndex element, unsigned char index);
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
-#ifdef USE_HMI
+#if defined(USE_HMI) && !defined(SPEED_OPT)
 DESCR_MEM char * fbdGetCaption(tElemIndex index);
-#endif // USE_HMI
+#endif // defined
 
 // stack calculating item
 typedef struct {
@@ -114,18 +114,24 @@ tOffset *storageOffsets;
 //  ...
 //  Offset of storage 0 of element N
 #ifdef USE_HMI
-DESCR_MEM char **captionOffsets;
-//  Offset of storage 0 of element 0
-
+// struct for fast access to points
+typedef struct {
+    tElemIndex index;           // point element index
+    DESCR_MEM char *caption;    // pointer to text caption
+} tPointAccess;
+//
+tPointAccess *wpOffsets;
+tPointAccess *spOffsets;
 #endif // USE_HMI
 #endif // SPEED_OPT
 
 tElemIndex fbdElementsCount;
 tElemIndex fbdStorageCount;
 tElemIndex fbdFlagsByteCount;
-#if defined(SPEED_OPT) && defined(USE_HMI)
-tElemIndex fbdCaptionsCount;
-#endif // defined
+#ifdef USE_HMI
+tElemIndex fbdWpCount;
+tElemIndex fbdSpCount;
+#endif // USE_HMI
 //
 char fbdFirstFlag;
 
@@ -151,8 +157,9 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     //
     fbdElementsCount = 0;
     fbdStorageCount = 0;
-#if defined(SPEED_OPT) && defined(USE_HMI)
-    fbdCaptionsCount = 0;
+#ifdef USE_HMI
+    fbdWpCount = 0;
+    fbdSpCount = 0;
 #endif // USE_HMI
     //
     if(!buf) return -1;
@@ -166,8 +173,8 @@ int fbdInit(DESCR_MEM unsigned char *buf)
         inputs += FBDInputsCount[elem];
         parameters += FBDParametersCount[elem];
         fbdStorageCount += FBDStorageCount[elem];
-#if defined(SPEED_OPT) && defined(USE_HMI)
-        if((elem == 22)||(elem == 23)) fbdCaptionsCount++;
+#ifdef USE_HMI
+        if(elem == 22) fbdWpCount++; else if(elem == 23) fbdSpCount++;
 #endif // USE_HMI
         fbdElementsCount++;
     }
@@ -183,7 +190,7 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     //
 #ifdef SPEED_OPT
 #ifdef USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset) + fbdCaptionsCount*sizeof(char *);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
 #else  // USE_HMI
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset);
 #endif // USE_HMI
@@ -199,9 +206,15 @@ void fbdSetMemory(char *buf)
     tHMIdata HMIdata;
 #endif // USE_HMI
 #ifdef SPEED_OPT
-    tOffset curInputOffset;
-    tOffset curParameterOffset;
-    tOffset curStorageOffset;
+    tOffset curInputOffset = 0;
+    tOffset curParameterOffset = 0;
+    tOffset curStorageOffset = 0;
+    unsigned char elem;
+#ifdef USE_HMI
+    tOffset curWP = 0;
+    tOffset curSP = 0;
+    DESCR_MEM char *curCap;
+#endif // USE_HMI
 #endif // SPEED_OPT
     fbdMemoryBuf = (tSignal *)buf;
     // init memory pointers
@@ -216,30 +229,39 @@ void fbdSetMemory(char *buf)
     inputOffsets = (tOffset *)(fbdFlagsBuf + fbdFlagsByteCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
     storageOffsets = parameterOffsets + fbdElementsCount;
-    //
-    curInputOffset = 0;
-    curParameterOffset = 0;
-    curStorageOffset = 0;
-    //
+#ifdef USE_HMI
+    // init buffer for fast access to watch- and set- points
+    wpOffsets = (tPointAccess *)(storageOffsets + fbdElementsCount);
+    spOffsets = wpOffsets + fbdWpCount;
+    curCap = fbdCaptionsBuf;
+#endif // USE_HMI
     for(i=0;i < fbdElementsCount;i++) {
         *(inputOffsets + i) = curInputOffset;
         *(parameterOffsets + i) = curParameterOffset;
         *(storageOffsets + i) = curStorageOffset;
         //
-        curInputOffset += FBDInputsCount[fbdDescrBuf[i] & ELEMMASK];
-        curParameterOffset += FBDParametersCount[fbdDescrBuf[i] & ELEMMASK];
-        curStorageOffset += FBDStorageCount[fbdDescrBuf[i] & ELEMMASK];
-    }
+        elem = fbdDescrBuf[i] & ELEMMASK;
+        curInputOffset += FBDInputsCount[elem];
+        curParameterOffset += FBDParametersCount[elem];
+        curStorageOffset += FBDStorageCount[elem];
+        //
 #ifdef USE_HMI
-    // init fast access caption buffer
-    captionOffsets = (DESCR_MEM char **)(storageOffsets + fbdElementsCount);
-    //
-    curInputOffset = 0;
-    for(i = 0;i < fbdCaptionsCount;i++) {
-        *(captionOffsets + i) = fbdCaptionsBuf + curInputOffset;
-        while(fbdCaptionsBuf[curInputOffset++]);
-    }
+        switch(elem) {
+            case 22:
+                (*(wpOffsets + curWP)).index = i;
+                (*(wpOffsets + curWP)).caption = curCap;
+                curWP++;
+                while(*(curCap++));
+                break;
+            case 23:
+                (*(spOffsets + curSP)).index = i;
+                (*(spOffsets + curSP)).caption = curCap;
+                curSP++;
+                while(*(curCap++));
+                break;
+        }
 #endif // USE_HMI
+    }
 #endif // SPEED_OPT
     //
 #ifdef USE_HMI
@@ -296,6 +318,7 @@ void fbdDoStep(tSignal period)
 }
 //
 #ifdef USE_HMI
+#ifndef SPEED_OPT
 bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex)
 {
     unsigned char elem;
@@ -311,42 +334,56 @@ bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex
     }
     return true;
 }
+#endif // SPEED_OPT
 // HMI functions
 // -------------------------------------------------------------------------------------------------------
 // get Setting Point
 bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex;
-    //
+    if(index >= fbdSpCount) return false;
+#ifdef SPEED_OPT
+    elemIndex = (*(spOffsets + index)).index;
+    (*pnt).caption = (*(spOffsets + index)).caption;
+#else
     if(!fbdGetElementIndex(index, 23, &elemIndex)) return false;
     //
+    (*pnt).caption = fbdGetCaption(elemIndex);
+#endif // SPEED_OPT
     (*pnt).value = fbdMemoryBuf[elemIndex];
     (*pnt).lowlimit = fbdGetParameter(elemIndex, 0);
     (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
-    (*pnt).caption = fbdGetCaption(elemIndex);
     return true;
 }
 // set Setting Point
 void fbdHMIsetSP(tSignal index, tSignal value)
 {
-    tElemIndex elemIndex = 0;
-    //
+    tElemIndex elemIndex;
+    if(index >= fbdSpCount) return;
+#ifdef SPEED_OPT
+    elemIndex = (*(spOffsets + index)).index;
+#else
     if(!fbdGetElementIndex(index, 23, &elemIndex)) return;
-    //
+#endif // SPEED_OPT
     if(fbdMemoryBuf[elemIndex] != value) fbdSetStorage(elemIndex, 0, value);
 }
 // get Watch Point
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex = 0;
-    //
+    if(index >= fbdWpCount) return false;
+#ifdef SPEED_OPT
+    elemIndex = (*(wpOffsets + index)).index;
+    (*pnt).caption = (*(wpOffsets + index)).caption;
+#else
     if(!fbdGetElementIndex(index, 22, &elemIndex)) return false;
-    //
-    (*pnt).value = fbdMemoryBuf[elemIndex];
     (*pnt).caption = fbdGetCaption(elemIndex);
+#endif // SPEED_OPT
+    (*pnt).value = fbdMemoryBuf[elemIndex];
     return true;
 }
 // get pointer to caption
+#ifndef SPEED_OPT
 DESCR_MEM char * fbdGetCaption(tElemIndex elemIndex)
 {
     tElemIndex captionIndex, index;
@@ -361,15 +398,11 @@ DESCR_MEM char * fbdGetCaption(tElemIndex elemIndex)
                 break;
         }
     }
-    //
-#ifdef SPEED_OPT
-    return *(captionOffsets + captionIndex);
-#else
     tOffset offset = 0;
     while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
     return &fbdCaptionsBuf[offset];
-#endif // SPEED_OPT
 }
+#endif // SPEED_OPT
 #endif // USE_HMI
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
@@ -612,12 +645,12 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 // set element calculated flag
 void setCalcFlag(tElemIndex element)
 {
-    fbdFlagsBuf[element>>2] |=  1u<<((element&3)<<1);
+    fbdFlagsBuf[element>>2] |= 1u<<((element&3)<<1);
 }
 // set signal rising flag
 void setRiseFlag(tElemIndex element)
 {
-    fbdFlagsBuf[element>>2] |=  1u<<(((element&3)<<1)+1);
+    fbdFlagsBuf[element>>2] |= 1u<<(((element&3)<<1)+1);
 }
 // get element calculated flag
 char getCalcFlag(tElemIndex element)
