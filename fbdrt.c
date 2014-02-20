@@ -1,7 +1,6 @@
 #include <stdint.h>
-#include <stdbool.h>       /* For true/false definition */
-
 #include "string.h"
+
 #include "fbdrt.h"
 
 // -----------------------------------------------------------------------------
@@ -141,11 +140,11 @@ char fbdFirstFlag;
 #define MAXELEMTYPEVAL 23u
 
 // inputs element count
-ROM_CONST unsigned char FBDInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0};
+ROM_CONST unsigned char FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0};
 // parameters element count
-ROM_CONST unsigned char FBDParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2};
+ROM_CONST unsigned char FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2};
 // saved values count
-ROM_CONST unsigned char FBDStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0,0,1};
+ROM_CONST unsigned char FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0,0,1};
 
 // --------------------------------------------------------------------------------------------
 
@@ -170,9 +169,9 @@ int fbdInit(DESCR_MEM unsigned char *buf)
         if(elem & 0x80) break;
         elem &= ELEMMASK;
         if(elem > MAXELEMTYPEVAL) return -1;
-        inputs += FBDInputsCount[elem];
-        parameters += FBDParametersCount[elem];
-        fbdStorageCount += FBDStorageCount[elem];
+        inputs += FBDdefInputsCount[elem];
+        parameters += FBDdefParametersCount[elem];
+        fbdStorageCount += FBDdefStorageCount[elem];
 #ifdef USE_HMI
         if(elem == 22) fbdWpCount++; else if(elem == 23) fbdSpCount++;
 #endif // USE_HMI
@@ -241,9 +240,9 @@ void fbdSetMemory(char *buf)
         *(storageOffsets + i) = curStorageOffset;
         //
         elem = fbdDescrBuf[i] & ELEMMASK;
-        curInputOffset += FBDInputsCount[elem];
-        curParameterOffset += FBDParametersCount[elem];
-        curStorageOffset += FBDStorageCount[elem];
+        curInputOffset += FBDdefInputsCount[elem];
+        curParameterOffset += FBDdefParametersCount[elem];
+        curStorageOffset += FBDdefStorageCount[elem];
         //
 #ifdef USE_HMI
         switch(elem) {
@@ -419,7 +418,7 @@ tOffset fbdInputOffset(tElemIndex index)
     tElemIndex i = 0;
     tOffset offset = 0;
     //
-    while (i < index) offset += FBDInputsCount[fbdDescrBuf[i++] & ELEMMASK];
+    while (i < index) offset += FBDdefInputsCount[fbdDescrBuf[i++] & ELEMMASK];
     return offset;
 #endif // SPEED_OPT
 }
@@ -440,7 +439,7 @@ void fbdCalcElement(tElemIndex curIndex)
     curInput = 0;
     //
     baseInput = fbdInputOffset(curIndex);       //
-    inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
+    inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
     //
     do {
         // если у текущего элемента еще есть входы
@@ -459,7 +458,7 @@ void fbdCalcElement(tElemIndex curIndex)
                 curIndex = inpIndex;
                 curInput = 0;
                 baseInput = fbdInputOffset(curIndex);       // элемент сменился, расчет смещения на первый вход элемента
-                inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
+                inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
             }
             continue;       // следующая итерация цикла
         } else {
@@ -546,8 +545,12 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(!fbdGetStorage(curIndex, 0)) {           // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s3);         // установка таймера
                         s2 = s1 - s2;                           // ошибка PID
+                        // error limit
+                        //v = MAX_SIGNAL/2/s4;
+                        //if(intAbs(s2) > v) s2 = (s2>0)?v:-v;
+                        //
                         if(!fbdFirstFlag) v = ((tLongSignal)(s1 - fbdGetStorage(curIndex, 1)) * 128)/s3; else v = 0;    // скорость изменения входной величины
-                        fbdSetStorage(curIndex, 1, s1);                                                          // сохранение прошлого входного значения
+                        fbdSetStorage(curIndex, 1, s1);                                                                 // сохранение прошлого входного значения
                         if((v < intAbs(s2))||(v > intAbs(s2*3))) {
                             s1= -(tLongSignal)s4*(s2*2 + v) / 128;
                         } else s1 = fbdMemoryBuf[curIndex];
@@ -595,7 +598,7 @@ void fbdCalcElement(tElemIndex curIndex)
             curIndex = FBDStack[FBDStackPnt].index;         // восстанавливаем родительский элемент
             curInput = FBDStack[FBDStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
             baseInput = fbdInputOffset(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
-            inputCount = FBDInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
+            inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
         } else break;                                       // если стек пуст, то расчет завершен
     } while(1);
 }
@@ -608,7 +611,7 @@ tSignal fbdGetParameter(tElemIndex element, unsigned char index)
     tElemIndex elem = 0;
     tOffset offset = 0;
     //
-    while (elem < element) offset += FBDParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
+    while (elem < element) offset += FBDdefParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
     return fbdParametersBuf[offset + index];
 #endif // SPEED_OPT
 }
@@ -621,7 +624,7 @@ tSignal fbdGetStorage(tElemIndex element, unsigned char index)
     tElemIndex elem = 0;
     tOffset offset = 0;
     //
-    while (elem<element) offset += FBDStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
+    while (elem<element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
     return fbdStorageBuf[offset + index];
 #endif // SPEED_OPT
 }
@@ -634,7 +637,7 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 #else
     tElemIndex elem = 0;
     //
-    while (elem < element) offset += FBDStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
+    while (elem < element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
     offset += index;
 #endif // SPEED_OPT
     if(fbdStorageBuf[offset] != value){
