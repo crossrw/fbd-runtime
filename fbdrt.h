@@ -3,24 +3,21 @@
 
 #include <stdbool.h>       // For true/false definition
 
+// =========================================================================
 // = begin tuning ==========================================================
-// stack size fo calculating, one stack element size =(sizeof(tElemIndex)+1) байт
-#define FBDSTACKSIZE 32
-// data type for stack pointer
-typedef unsigned char tFBDStackPnt;
-// data type for FBD signal
-typedef signed short tSignal;
-#define MAX_SIGNAL INT16_MAX
-#define MIN_SIGNAL INT16_MIN
-//
-typedef long tLongSignal;
-// data type for element index
-typedef unsigned char tElemIndex;
+// byte order
+//#define BIG_ENDIAN
+// size of FBD signal
+#define SIGNAL_SIZE 2
+// size of element index
+#define INDEX_SIZE 1
 //
 // data in ROM/FLASH
 #define ROM_CONST const
+#define ROM_CONST_SUFX
 // schema description
 #define DESCR_MEM const
+#define DESCR_MEM_SUFX
 //
 // needed if you use HMI functions
 #define USE_HMI
@@ -28,10 +25,55 @@ typedef unsigned char tElemIndex;
 // speed optimization reduces the calculation time, but increases
 // the size of memory (RAM) required
 #define SPEED_OPT
-
-// = end tuning ===========================================================
+// stack size fo calculating, one stack element size =(sizeof(tElemIndex)+1) байт
+#define FBDSTACKSIZE 32
+// data type for stack pointer
+typedef unsigned char tFBDStackPnt;
+//
+typedef long tLongSignal;
+//
+// = end tuning ============================================================
+// =========================================================================
 //
 typedef unsigned short tOffset;
+//
+#if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
+#define SIGNAL_BYTE_ORDER(x) lotobigsign(x)
+#else
+#define SIGNAL_BYTE_ORDER(x) (x)
+#endif // defined
+
+#if defined(BIG_ENDIAN) && (INDEX_SIZE > 1)
+#define ELEMINDEX_BYTE_ORDER(x) lotobigidx(x)
+#else
+#define ELEMINDEX_BYTE_ORDER(x) (x)
+#endif // defined
+
+#if (SIGNAL_SIZE == 1)
+typedef signed char tSignal;
+#define MAX_SIGNAL 127
+#define MIN_SIGNAL (-128)
+//
+#elif (SIGNAL_SIZE == 2)
+typedef signed short tSignal;
+#define MAX_SIGNAL 32767
+#define MIN_SIGNAL (-32768)
+//
+#elif (SIGNAL_SIZE == 4)
+typedef signed long int tSignal;
+#define MAX_SIGNAL 2147483647L
+#define MIN_SIGNAL (-2147483648L)
+#else
+#error Invalid value of SIGNAL_SIZE
+#endif // SIGNAL_SIZE
+//
+#if INDEX_SIZE == 1
+typedef unsigned char tElemIndex;
+#elif INDEX_SIZE == 2
+typedef unsigned short tElemIndex;
+#else
+#error Invalid value of INDEX_SIZE
+#endif // INDEX_SIZE
 //
 // end element description flag
 #define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
