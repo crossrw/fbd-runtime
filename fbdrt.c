@@ -1,6 +1,4 @@
-#include <stdint.h>
 #include "string.h"
-
 #include "fbdrt.h"
 
 // -----------------------------------------------------------------------------
@@ -30,7 +28,13 @@ tSignal fbdGetParameter(tElemIndex element, unsigned char index);
 tSignal fbdGetStorage(tElemIndex element, unsigned char index);
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
 #if defined(USE_HMI) && !defined(SPEED_OPT)
-DESCR_MEM char * fbdGetCaption(tElemIndex index);
+DESCR_MEM char DESCR_MEM_SUFX * DESCR_MEM_SUFX fbdGetCaption(tElemIndex index);
+#endif // defined
+#if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
+tSignal lotobigsign(tSignal val);
+#endif // defined
+#if defined(BIG_ENDIAN) && (INDEX_SIZE > 1)
+tElemIndex lotobigidx(tElemIndex val);
 #endif // defined
 
 // stack calculating item
@@ -49,7 +53,7 @@ tSignal intAbs(tSignal val);
 
 // ----------------------------------------------------------
 // scheme description array (at ROM or RAM)
-DESCR_MEM unsigned char *fbdDescrBuf;
+DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdDescrBuf;
 // data format:
 //  TypeElement1          <- elements types
 //  TypeElement2
@@ -57,18 +61,18 @@ DESCR_MEM unsigned char *fbdDescrBuf;
 //  TypeElementN
 //  -1                    <- end flag
 // elements input descriptions
-DESCR_MEM tElemIndex *fbdInputsBuf;
+DESCR_MEM tElemIndex DESCR_MEM_SUFX *fbdInputsBuf;
 //  InputOfElement        <- elements inputs
 //  InputOfElement
 //  ..
 // parameters description
-DESCR_MEM tSignal *fbdParametersBuf;
+DESCR_MEM tSignal DESCR_MEM_SUFX *fbdParametersBuf;
 //  ParameterOfElement    <- parameter of element
 //  ParameterOfElement
 //  ...
 #ifdef USE_HMI
 // HMI captions
-DESCR_MEM char *fbdCaptionsBuf;
+DESCR_MEM char DESCR_MEM_SUFX *fbdCaptionsBuf;
 //  text, 0               <- captions
 //  text, 0
 //  ...
@@ -115,8 +119,8 @@ tOffset *storageOffsets;
 #ifdef USE_HMI
 // struct for fast access to points
 typedef struct {
-    tElemIndex index;           // point element index
-    DESCR_MEM char *caption;    // pointer to text caption
+    tElemIndex index;                           // point element index
+    DESCR_MEM char DESCR_MEM_SUFX *caption;     // pointer to text caption
 } tPointAccess;
 //
 tPointAccess *wpOffsets;
@@ -140,15 +144,15 @@ char fbdFirstFlag;
 #define MAXELEMTYPEVAL 23u
 
 // inputs element count
-ROM_CONST unsigned char FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0};
 // parameters element count
-ROM_CONST unsigned char FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2};
 // saved values count
-ROM_CONST unsigned char FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0,0,1};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0,0,1};
 
 // --------------------------------------------------------------------------------------------
 
-int fbdInit(DESCR_MEM unsigned char *buf)
+int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
 {
     tOffset inputs = 0;
     tOffset parameters = 0;
@@ -180,10 +184,10 @@ int fbdInit(DESCR_MEM unsigned char *buf)
     // check tSignal size
     if(elem != END_MARK) return -2;
     // calc pointers
-    fbdInputsBuf = (DESCR_MEM tElemIndex *)(fbdDescrBuf + fbdElementsCount + 1);
-    fbdParametersBuf = (DESCR_MEM tSignal *)(fbdInputsBuf + inputs);
+    fbdInputsBuf = (DESCR_MEM tElemIndex DESCR_MEM_SUFX *)(fbdDescrBuf + fbdElementsCount + 1);
+    fbdParametersBuf = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdInputsBuf + inputs);
 #ifdef USE_HMI
-    fbdCaptionsBuf = (DESCR_MEM char *)(fbdParametersBuf + parameters);
+    fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
 #endif // USE_HMI
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&3)?1:0);
     //
@@ -212,7 +216,7 @@ void fbdSetMemory(char *buf)
 #ifdef USE_HMI
     tOffset curWP = 0;
     tOffset curSP = 0;
-    DESCR_MEM char *curCap;
+    DESCR_MEM char DESCR_MEM_SUFX *curCap;
 #endif // USE_HMI
 #endif // SPEED_OPT
     fbdMemoryBuf = (tSignal *)buf;
@@ -383,7 +387,7 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 }
 // get pointer to caption
 #ifndef SPEED_OPT
-DESCR_MEM char * fbdGetCaption(tElemIndex elemIndex)
+DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
 {
     tElemIndex captionIndex, index;
     //
@@ -445,7 +449,7 @@ void fbdCalcElement(tElemIndex curIndex)
         // если у текущего элемента еще есть входы
         if(curInput < inputCount) {
             // и этот вход еще не расчитан
-            inpIndex = fbdInputsBuf[baseInput + curInput];
+            inpIndex = ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput + curInput]);
             // проверка: вход уже рассчитан или ко входу подключен выход этого же компонента
             if(getCalcFlag(inpIndex)||(curIndex == inpIndex)) curInput++; else {
                 // ставим признак того, что элемент как-бы уже расчитан
@@ -466,15 +470,15 @@ void fbdCalcElement(tElemIndex curIndex)
             // определяем значения входов (если надо)
             switch(inputCount) {
                 case 5:
-                    v = fbdMemoryBuf[fbdInputsBuf[baseInput + 4]];
+                    v = fbdMemoryBuf[ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput + 4])];
                 case 4:
-                    s4 = fbdMemoryBuf[fbdInputsBuf[baseInput + 3]];
+                    s4 = fbdMemoryBuf[ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput + 3])];
                 case 3:
-                    s3 = fbdMemoryBuf[fbdInputsBuf[baseInput + 2]];
+                    s3 = fbdMemoryBuf[ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput + 2])];
                 case 2:
-                    s2 = fbdMemoryBuf[fbdInputsBuf[baseInput + 1]];
+                    s2 = fbdMemoryBuf[ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput + 1])];
                 case 1:
-                    s1 = fbdMemoryBuf[fbdInputsBuf[baseInput]];
+                    s1 = fbdMemoryBuf[ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput])];
             }
             // вычисляем значение текущего элемента, результат в s1
             switch(fbdDescrBuf[curIndex] & ELEMMASK) {
@@ -492,7 +496,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = s1 && s2;
                     break;
                 case 4:                                                                 // OR
-                    s1 = s1||s2;
+                    s1 = s1 || s2;
                     break;
                 case 5:                                                                 // XOR
                     s1 = (s1?1:0)^(s2?1:0);
@@ -505,7 +509,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 7:                                                                 // DTRG
                     // смотрим установку флага фронта на входе "С"
-                    if(getRiseFlag(fbdInputsBuf[baseInput+1]))
+                    if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1]))
                         fbdSetStorage(curIndex, 0, s1);
                     else
                         s1 = fbdGetStorage(curIndex, 0);
@@ -521,7 +525,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 11:                                                                // DIV
                     if(!s2) {
-                        if(s1>0) s1 = MAX_SIGNAL; else if(s1<0) s1 = MIN_SIGNAL; else s1 = 1;
+                        if(s1 > 0) s1 = MAX_SIGNAL; else if(s1 < 0) s1 = MIN_SIGNAL; else s1 = 1;
                     } else s1 /= s2;
                     break;
                 case 12:                                                                // TIMER
@@ -568,8 +572,8 @@ void fbdCalcElement(tElemIndex curIndex)
                 case 19:                                                                // Counter
                     if(s3) s1 = 0; else {
                         s1 = fbdGetStorage(curIndex, 0);
-                        if(getRiseFlag(fbdInputsBuf[baseInput])) s1++;
-                        if(getRiseFlag(fbdInputsBuf[baseInput+1])) s1--;
+                        if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput]))) s1++;
+                        if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1]))) s1--;
                     }
                     fbdSetStorage(curIndex, 0, s1);
                     break;
@@ -606,13 +610,13 @@ void fbdCalcElement(tElemIndex curIndex)
 tSignal fbdGetParameter(tElemIndex element, unsigned char index)
 {
 #ifdef SPEED_OPT
-    return fbdParametersBuf[*(parameterOffsets + element) + index];
+    return SIGNAL_BYTE_ORDER(fbdParametersBuf[*(parameterOffsets + element) + index]);
 #else
     tElemIndex elem = 0;
     tOffset offset = 0;
     //
     while (elem < element) offset += FBDdefParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
-    return fbdParametersBuf[offset + index];
+    return SIGNAL_BYTE_ORDER(fbdParametersBuf[offset + index]);
 #endif // SPEED_OPT
 }
 // get value of elemnt memory
@@ -670,3 +674,53 @@ tSignal intAbs(tSignal val)
 {
     return (val>=0)?val:-val;
 }
+
+#if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
+typedef union {
+    tSignal value;
+#if SIGNAL_SIZE == 2
+    char B[2];
+#elif SIGNAL_SIZE == 4
+    char B[4];
+#endif
+} teus;
+
+tSignal lotobigsign(tSignal val)
+{
+    teus uval;
+    char t;
+    //
+    uval.value = val;
+    t = uval.B[0];
+#if (SIGNAL_SIZE == 2)
+    uval.B[0] = uval.B[1];
+    uval.B[1] = t;
+#else
+    uval.B[0] = uval.B[3];
+    uval.B[3] = t;
+    t = uval.B[1];
+    uval.B[1] = uval.B[2];
+    uval.B[2] = t;
+#endif // SIGNAL_SIZE
+    return uval.value;
+}
+#endif // defined
+//
+#if defined(BIG_ENDIAN) && (INDEX_SIZE > 1)
+typedef union {
+    tSignal value;
+    char B[2];
+} teui;
+
+tElemIndex lotobigidx(tElemIndex val)
+{
+    teui uval;
+    char t;
+    //
+    uval.value = val;
+    t = uval.B[0];
+    uval.B[0] = uval.B[1];
+    uval.B[1] = t;
+    return uval.value;
+}
+#endif // defined
