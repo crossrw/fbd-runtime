@@ -34,6 +34,7 @@ Key features
 ------------
 * Not binded to a specific hardware and can be ported to any platform for which there is a C compiler
 * The algorithm is optimized for use in embedded controllers: PIC, AVR, ARM etc. Calculating does not use recursion, built data stack is used very sparingly
+* Support Big-Endian and Litle-Endian architectures 
 * Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb
 * Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded
 * Storing intermediate results in EEPROM (for flip-flop, timers, setpoints, etc)
