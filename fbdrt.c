@@ -509,7 +509,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 7:                                                                 // DTRG
                     // смотрим установку флага фронта на входе "С"
-                    if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1]))
+                    if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1])))
                         fbdSetStorage(curIndex, 0, s1);
                     else
                         s1 = fbdGetStorage(curIndex, 0);
