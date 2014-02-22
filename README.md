@@ -283,19 +283,35 @@ Element is used to integrate the input signal value. Can be used together with a
 ### Other
 #### Timer
 ```
-    +--+----+                +--+----+
-----|D |  Q |----        ----|D |  Q O----
-    |  |    |                |  |    |
-----|T |    |            ----|T |    |
-    +--+----+                +--+----+
+    +--+------+                +--+------+
+----|D | TON Q|----        ----|D | TON QO----
+    |  |      |                |  |      |
+----|T |      |            ----|T |      |
+    +--+------+                +--+------+
 ```
-Timer - not exactly a traditional element. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table:
+Standart timer. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table and diagram below:
 <table>
  <tr><td><b>D</b></td><td><b>Сondition</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
  <tr><td>Logical "0"</td><td>Any</td><td>0</td><td>1</td></tr>
  <tr><td>Logical "1"</td><td>Time T not expired</td><td>0</td><td>1</td></tr>
  <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td><td>0</td></tr>
 </table>
+```
+                   On-delay (TON) timing
+                   
+    +------------+       +---+   +------------+
+D   |            |       |   |   |            |
+  --+            +-------+   +---+            +--------------
+    t0           t1      t2  t3  t4           t5
+            +----+                       +----+
+Q           |    |                       |    |
+  ----------+    +-----------------------+    +--------------
+          t0+T   t1                    t4+T   t5
+_ ----------+    +-----------------------+    +--------------
+Q           |    |                       |    |
+            +----+                       +----+
+          t0+T   t1                    t4+T   t5
+```
 #### Comparator
 ```
     +-----+                  +-----+
