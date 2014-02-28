@@ -280,8 +280,8 @@ The calculation can not use the traditional PID algorithm. Instead, use the Eule
     +---+----+
 ```
 Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
-### Other
-#### Timer
+### Timers
+#### Timer TON
 ```
     +--+------+                +--+------+
 ----|D | TON Q|----        ----|D | TON QO----
@@ -289,7 +289,7 @@ Element is used to integrate the input signal value. Can be used together with a
 ----|T |      |            ----|T |      |
     +--+------+                +--+------+
 ```
-Standart timer. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table and diagram below:
+Standart on-delay timer. It can be used as a signal generator with a given period or time counter operation. At timer two inputs (D and T) and one output. If the input D is a logic 0, the output is always 0. If the input signal D logic 1 appears, then the output will be 1 in a time whose value is present at input T. Before to the expiration time T is stored at the output signal 0. See table and diagram below:
 <table>
  <tr><td><b>D</b></td><td><b>Сondition</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
  <tr><td>Logical "0"</td><td>Any</td><td>0</td><td>1</td></tr>
@@ -312,6 +312,33 @@ Q           |    |                       |    |
             +----+                       +----+
           t0+T   t1                    t4+T   t5
 ```
+#### Timer TP
+```
+    +--+------+                +--+------+
+----/D |  TP Q|----        ----/D |  TP QO----
+    |  |      |                |  |      |
+----|T |      |            ----|T |      |
+    +--+------+                +--+------+
+```
+At timer two inputs (D and T) and one output. A rising edge starts the timer and sets the output signal 1. Output signal 1 remains until the timer expires. See diagram below:
+```
+                   Pulse (TP) timing
+                   
+    +------------+       +-+ +-+     +------------+
+D   |            |       | | | |     |            |
+  --+            +-------+ +-+ +-----+            +-----
+    t0           t1      t2  t3      t4           t5
+    +-------+            +-------+   +-------+
+Q   |       |            |       |   |       |
+  --+       +------------+       +---+       +----------
+    t0    t0+T           t2    t2+T  t4    t4+T
+    
+_ --+       +------------+       +---+       +----------
+Q   |       |            |       |   |       |
+    +-------+            +-------+   +-------+
+    t0    t0+T           t2    t2+T  t4    t4+T
+```
+### Other
 #### Comparator
 ```
     +-----+                  +-----+
@@ -324,6 +351,32 @@ Element compares the signal at its two inputs. Truth table:
  <tr><td><b>Сondition</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
  <tr><td>Input1Val &gt; Input2Val</td><td>1</td><td>0</td></tr>
  <tr><td>Input1Val &lt;= Input2Val</td><td>0</td><td>1</td></tr>
+</table>
+#### MAX
+```
+    +-----+       
+----| MAX |----   
+----|     |       
+    +-----+       
+```
+Element has two inputs and one output. Element selects the maximum value of the signal. Truth table:
+<table>
+ <tr><td><b>Сondition</b></td><td><b>Output</b></td></tr>
+ <tr><td>Input1Val &gt; Input2Val</td><td>Input1Val</td></tr>
+ <tr><td>Input1Val &lt;= Input2Val</td><td>Input2Val</td></tr>
+</table>
+#### MIN
+```
+    +-----+       
+----| MIN |----   
+----|     |       
+    +-----+       
+```
+Element has two inputs and one output. Element selects the minimum value of the signal. Truth table:
+<table>
+ <tr><td><b>Сondition</b></td><td><b>Output</b></td></tr>
+ <tr><td>Input1Val &gt; Input2Val</td><td>Input2Val</td></tr>
+ <tr><td>Input1Val &lt;= Input2Val</td><td>Input1Val</td></tr>
 </table>
 #### Multiplexer
 ```
