@@ -37,7 +37,7 @@ Key features
 * Support Big-Endian and Litle-Endian architectures 
 * Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb
 * Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded
-* Storing intermediate results in EEPROM (for flip-flop, timers, setpoints, etc)
+* Storing intermediate results in NVRAM (for flip-flop, timers, setpoints, etc)
 * Support network variables (ModBus or something like that)
 * Basic HMI support
 
@@ -177,7 +177,7 @@ Truth table:
  <tr><td>1</td><td>0</td><td>1</td><td>Set</td></tr>
  <tr><td>1</td><td>1</td><td>?</td><td>Not allowed</td></tr>
 </table>
-At each change its latch value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
+At each change its latch value is stored in NVRAM (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### D flip-flop
 ```
     +--+----+                +--+----+
@@ -195,7 +195,7 @@ Truth table:
  <tr><td>Any value</td><td>Non-rising</td><td>Saved D value</td><td>Hold state</td></tr>
 </table>
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
-At each change its flip-flop value is stored in eeprom (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
+At each change its flip-flop value is stored in NVRAM (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 #### Up-down counter
 ```
     +--+----+
@@ -436,12 +436,12 @@ Disabling definition `USE_HMI` allow slightly reduce the size of the library cod
 // speed optimization reduces the calculation time, but increases the size of memory (RAM) required
 #define SPEED_OPT
 ```
-Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored eeprom (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or eeprom values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
+Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored NVRAM (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or NVRAM values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
   * For discrete inputs and outputs use the values `0` and `1`.
   * For analogue inputs and outputs use the values expressed in engineering units, possibly with some decimal factor. For this, in some cases, the conversion function should perform PLC raw input data to engineering units and vice versa. For example the value of temperature sensor +10.5 C must be converted to a number 105.
-  * Do not use a direct entry in the eeprom because Library calls `FBDsetProc()` each time you change the value of any trigger or timer. Direct writing to eeprom can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
+  * Do not use a direct entry in the EEPROM because Library calls `FBDsetProc()` each time you change the value of any trigger or timer. Direct writing to EEPROM can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
 
-In the absence of part of the PLC eeprom or network access these functions can not be implemented.
+In the absence of part of the PLC EEPROM or network access these functions can not be implemented.
 Example empty (only for debug) implementation of read and write functions:
 ```
 tSignal FBDgetProc(char type, tSignal index)
@@ -549,7 +549,7 @@ Summary table of types of elements below:
  <tr><td>Arithmetical SUB</td><td>9</td><td>-</td><td>2</td><td>0</td></tr> 
  <tr><td>Arithmetical MUL</td><td>10</td><td>-</td><td>2</td><td>0</td></tr> 
  <tr><td>Arithmetical DIV</td><td>11</td><td>-</td><td>2</td><td>0</td></tr> 
- <tr><td>Timer</td><td>12</td><td>76</td><td>2</td><td>0</td></tr> 
+ <tr><td>Timer TON</td><td>12</td><td>76</td><td>2</td><td>0</td></tr> 
  <tr><td>Comparator</td><td>13</td><td>77</td><td>2</td><td>0</td></tr> 
  <tr><td>Output var</td><td>14</td><td>-</td><td>1</td><td>1</td></tr> 
  <tr><td>Input pin</td><td>15</td><td>-</td><td>0</td><td>1</td></tr> 
@@ -561,6 +561,11 @@ Summary table of types of elements below:
  <tr><td>Abs value</td><td>21</td><td>-</td><td>1</td><td>0</td></tr>
  <tr><td>WatchPoint</td><td>22</td><td>-</td><td>1</td><td>0</td></tr>
  <tr><td>SetPoint</td><td>23</td><td>-</td><td>1</td><td>2</td></tr>
+ <tr><td>Timer TP</td><td>24</td><td>88</td><td>2</td><td>0</td></tr>
+ <tr><td>Min</td><td>25</td><td>-</td><td>2</td><td>0</td></tr>
+ <tr><td>Max</td><td>26</td><td>-</td><td>2</td><td>0</td></tr>
+ <tr><td>Limit</td><td>27</td><td>-</td><td>3</td><td>0</td></tr>
+ <tr><td>Equal</td><td>28</td><td>92</td><td>2</td><td>0</td></tr>
 </table>
 #### Example
 For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
