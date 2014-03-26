@@ -21,10 +21,9 @@
 //
 // needed if you use HMI functions
 #define USE_HMI
-//
 // speed optimization reduces the calculation time, but increases
 // the size of memory (RAM) required
-#define SPEED_OPT
+//#define SPEED_OPT
 // stack size fo calculating, one stack element size =(sizeof(tElemIndex)+1) байт
 #define FBDSTACKSIZE 32
 // data type for stack pointer
@@ -84,6 +83,7 @@ typedef unsigned short tElemIndex;
 // bit 6:   reserved
 // bit 7:   1
 
+// -------------------------------------------------------------------------------------------------------
 // Initialization functions
 // -------------------------------------------------------------------------------------------------------
 // need call first, return amount of memory (RAM) required for calculating or (if error) negative value:
@@ -92,11 +92,20 @@ typedef unsigned short tElemIndex;
 int fbdInit(DESCR_MEM unsigned char *descr);
 // need call after fbdInit(), set memory buf for calculating
 void fbdSetMemory(char *buf);
-
+//
+// -------------------------------------------------------------------------------------------------------
 // Calculating function
 // -------------------------------------------------------------------------------------------------------
 // executing one step scheme calculating, period - time from the previous call fbdDoStep() in milliseconds
 void fbdDoStep(tSignal period);
+
+// -------------------------------------------------------------------------------------------------------
+// Network Slave support
+// -------------------------------------------------------------------------------------------------------
+// set net variable value
+void fbdSetNetVar(tSignal index, tSignal value);
+// get net variable value
+bool fbdGetNetVar(tSignal index, tSignal *value);
 
 #ifdef USE_HMI
 // HMI

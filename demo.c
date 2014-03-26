@@ -17,10 +17,7 @@ tSignal FBDgetProc(char type, tSignal index)
         printf(" request InputPin(%d)\n", index);
         return 0;
     case 1:
-        printf(" request Variable(%d)\n", index);
-        return 0;
-    case 2:
-        printf(" request EEPROM(%d)\n", index);
+        printf(" request NVRAM(%d)\n", index);
         return 0;
     }
 }
@@ -33,10 +30,7 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
         printf(" set OutputPin(%d) to value %d\n", index, *value);
         break;
     case 1:
-        printf(" set Variable(%d) to value %d\n", index, *value);
-        break;
-    case 2:
-        printf(" set EEPROM(%d) to value %d\n", index, *value);
+        printf(" set NVRAM(%d) to value %d\n", index, *value);
         break;
     }
 }

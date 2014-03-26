@@ -4,20 +4,18 @@
 // -----------------------------------------------------------------------------
 // FBDgetProc() and FBDsetProc() - callback, must be present in main program
 // -----------------------------------------------------------------------------
-// FBDgetProc(): reading input signal, network variable or eeprom
+// FBDgetProc(): reading input signal or nvram
 // type - type of reading
 //  0 - input signal of MCU
-//  1 - input variable
-//  2 - EEPROM value
+//  1 - nvram value
 // index - number (index) of reading signal
 // result - signal value
 extern tSignal FBDgetProc(char type, tSignal index);
 
-// FBDsetProc() writing output signal, variable or eeprom
+// FBDsetProc() writing output signal or nvram
 // type - type of writing
 //  0 - output signal of MCU
-//  1 - output variable
-//  2 - write to EEPROM
+//  1 - write to nvram
 // index - number (index) of writing signal
 // value - pointer to writing value
 extern void FBDsetProc(char type, tSignal index, tSignal *value);
@@ -141,17 +139,18 @@ char fbdFirstFlag;
 #define ELEMMASK 0x3F
 #define INVERTFLAG 0x40
 
-#define MAXELEMTYPEVAL 23u
+#define MAXELEMTYPEVAL 28u
 
 // inputs element count
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2};
 // parameters element count
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2,0,0,0,0,0};
 // saved values count
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,2,1,1,0,0,0,1};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0};
+//                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2
+//                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
 
-// --------------------------------------------------------------------------------------------
-
+// -------------------------------------------------------------------------------------------------------
 int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
 {
     tOffset inputs = 0;
@@ -201,7 +200,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount;
 #endif // SPEED_OPT
 }
-
+// -------------------------------------------------------------------------------------------------------
 void fbdSetMemory(char *buf)
 {
     tElemIndex i;
@@ -225,8 +224,8 @@ void fbdSetMemory(char *buf)
     fbdFlagsBuf = (char *)(fbdStorageBuf + fbdStorageCount);
     // init memory buf
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
-    // restore triggers values from EEPROM
-    for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(2, i);
+    // restore triggers values from nvram
+    for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(1, i);
 #ifdef SPEED_OPT
     // init fast access buffers
     inputOffsets = (tOffset *)(fbdFlagsBuf + fbdFlagsByteCount);
@@ -278,7 +277,7 @@ void fbdSetMemory(char *buf)
 #endif // USE_HMI
     fbdFirstFlag = 1;
 }
-
+// -------------------------------------------------------------------------------------------------------
 void fbdDoStep(tSignal period)
 {
     tSignal value, param;
@@ -287,27 +286,28 @@ void fbdDoStep(tSignal period)
     // reset calculating and rising flags
     memset(fbdFlagsBuf, 0, fbdFlagsByteCount);
     // main calculating loop
-    index = 0;
-    while(1) {
-        element = fbdDescrBuf[index];
-        if(element & 0x80) break;                                           // end of schema
-
-        switch(element & ELEMMASK) {
-            case 12:                                                        // elements with timer
-            case 17:
-            case 18:
+    for(index=0; index < fbdElementsCount; index++) {
+        element = fbdDescrBuf[index] & ELEMMASK;
+        switch(element) {
+            // elements with timer
+            case 12:                                                        // timer TON
+            case 17:                                                        // PID
+            case 18:                                                        // SUM
+            case 24:                                                        // timer TP
                 value = fbdGetStorage(index, 0);
-                if(value > 0) {
+                if(value) {
                     value -= period;
                     if(value < 0) value = 0;
                     fbdSetStorage(index, 0, value);
                 }
                 break;
-            case 0:                                                         // output elements
-            case 14:
+            case 0:                                                         // output PIN
                 fbdCalcElement(index);
                 param = fbdGetParameter(index, 0);
-                FBDsetProc(element?1:0, param, &fbdMemoryBuf[index]);       // set variable or output pin value
+                FBDsetProc(0, param, &fbdMemoryBuf[index]);                 // set output pin
+                break;
+            case 14:                                                        // output VAR
+                fbdCalcElement(index);
                 break;
 #ifdef USE_HMI
             case 22:                                                        // watch point
@@ -315,13 +315,46 @@ void fbdDoStep(tSignal period)
                 break;
 #endif // USE_HMI
         }
-        index++;
     }
     fbdFirstFlag = 0;
 }
+// -------------------------------------------------------------------------------------------------------
+// set net variable values
+void fbdSetNetVar(tSignal index, tSignal value)
+{
+    tElemIndex i;
+    //
+    for(i=0; i < fbdElementsCount; i++) {
+        if(fbdDescrBuf[i] == 16) {
+            if(fbdGetParameter(i, 0) == index) {
+                fbdSetStorage(i, 0, value);
+                return;
+            }
+        }
+    }
+    return;
+}
+// -------------------------------------------------------------------------------------------------------
+// get net variable value
+bool fbdGetNetVar(tSignal index, tSignal *value)
+{
+    tElemIndex i;
+    //
+    for(i=0; i < fbdElementsCount; i++) {
+        if(fbdDescrBuf[i] == 14) {
+            if(fbdGetParameter(i, 0) == index) {
+                *value = *(fbdMemoryBuf + i);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+//
 //
 #ifdef USE_HMI
 #ifndef SPEED_OPT
+// -------------------------------------------------------------------------------------------------------
 bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex)
 {
     unsigned char elem;
@@ -358,6 +391,7 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
     return true;
 }
+// -------------------------------------------------------------------------------------------------------
 // set Setting Point
 void fbdHMIsetSP(tSignal index, tSignal value)
 {
@@ -370,6 +404,7 @@ void fbdHMIsetSP(tSignal index, tSignal value)
 #endif // SPEED_OPT
     if(fbdMemoryBuf[elemIndex] != value) fbdSetStorage(elemIndex, 0, value);
 }
+// -------------------------------------------------------------------------------------------------------
 // get Watch Point
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 {
@@ -385,6 +420,7 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
     (*pnt).value = fbdMemoryBuf[elemIndex];
     return true;
 }
+// -------------------------------------------------------------------------------------------------------
 // get pointer to caption
 #ifndef SPEED_OPT
 DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
@@ -426,6 +462,7 @@ tOffset fbdInputOffset(tElemIndex index)
     return offset;
 #endif // SPEED_OPT
 }
+// -------------------------------------------------------------------------------------------------------
 // calculating element output value
 void fbdCalcElement(tElemIndex curIndex)
 {
@@ -528,7 +565,9 @@ void fbdCalcElement(tElemIndex curIndex)
                         if(s1 > 0) s1 = MAX_SIGNAL; else if(s1 < 0) s1 = MIN_SIGNAL; else s1 = 1;
                     } else s1 /= s2;
                     break;
-                case 12:                                                                // TIMER
+                case 12:                                                                // TIMER TON
+                    // s1 - D
+                    // s2 - T
                     if(s1) {
                         s1 = (fbdGetStorage(curIndex, 0) == 0);
                     } else {
@@ -543,7 +582,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = FBDgetProc(0, fbdGetParameter(curIndex, 0));                   // INPUT PIN
                     break;
                 case 16:
-                    s1 = FBDgetProc(1, fbdGetParameter(curIndex, 0));                   // INPUT VAR
+                    s1 = fbdGetStorage(curIndex, 0);                                    // INPUT VAR
                     break;
                 case 17:                                                                // PID
                     if(!fbdGetStorage(curIndex, 0)) {           // проверка срабатывания таймера
@@ -584,18 +623,42 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(v==3) s1 = s4;
                     break;
                 case 21:                                                                // ABS
-                    if(s1<0) s1 = -s1;
+                    if(s1 < 0) s1 = -s1;
                     break;
                 case 23:                                                                // HMI setpoint
 #ifdef USE_HMI
                     s1 = fbdGetStorage(curIndex, 0);
 #endif // USE_HMI
                     break;
+                case 24:                                                                // TIMER TP
+                    // s1 - D
+                    // s2 - T
+                    if(fbdGetStorage(curIndex, 0)) {
+                        s1 = 1;
+                    } else {
+                        if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput])) && s2) {
+                            fbdSetStorage(curIndex, 0, s2);
+                            s1 = 1;
+                        } else s1 = 0;
+                    }
+                    break;
+                case 25:                                                                // MIN
+                    if(s2 < s1) s1 = s2;
+                    break;
+                case 26:                                                                // MAX
+                    if(s2 > s1) s1 = s2;
+                    break;
+                case 27:                                                                // LIM
+                    if(s1 > s2) s1 = s2; else if(s1 < s3) s1 = s3;
+                    break;
+                case 28:                                                                // EQ
+                    s1 = s1 == s2;
+                    break;
             }
             setCalcFlag(curIndex);                                  // set calculated flag
             if(fbdDescrBuf[curIndex] & INVERTFLAG) s1 = s1?0:1;     // inverse result if need
-            if(s1 > fbdMemoryBuf[curIndex]) setRiseFlag(curIndex);  // проверка на нарастающий фронт
-            fbdMemoryBuf[curIndex] = s1;                            // сохраняю значение в буфере
+            if(s1 > fbdMemoryBuf[curIndex]) setRiseFlag(curIndex);  // check rising edge
+            fbdMemoryBuf[curIndex] = s1;                            // save result to memory buf
         }
         // текущий элемент вычислен, пробуем достать из стека родительский элемент
         if(FBDStackPnt--) {
@@ -603,9 +666,10 @@ void fbdCalcElement(tElemIndex curIndex)
             curInput = FBDStack[FBDStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
             baseInput = fbdInputOffset(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
             inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
-        } else break;                                       // если стек пуст, то расчет завершен
+        } else break;                                       // calculation completed, if stack is empty
     } while(1);
 }
+// -------------------------------------------------------------------------------------------------------
 // get value of element parameter
 tSignal fbdGetParameter(tElemIndex element, unsigned char index)
 {
@@ -619,6 +683,7 @@ tSignal fbdGetParameter(tElemIndex element, unsigned char index)
     return SIGNAL_BYTE_ORDER(fbdParametersBuf[offset + index]);
 #endif // SPEED_OPT
 }
+// -------------------------------------------------------------------------------------------------------
 // get value of elemnt memory
 tSignal fbdGetStorage(tElemIndex element, unsigned char index)
 {
@@ -632,6 +697,7 @@ tSignal fbdGetStorage(tElemIndex element, unsigned char index)
     return fbdStorageBuf[offset + index];
 #endif // SPEED_OPT
 }
+// -------------------------------------------------------------------------------------------------------
 // save element memory
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
@@ -646,29 +712,34 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 #endif // SPEED_OPT
     if(fbdStorageBuf[offset] != value){
         fbdStorageBuf[offset] = value;
-        FBDsetProc(2,offset,&fbdStorageBuf[offset]);    // save to eeprom
+        FBDsetProc(1, offset, &fbdStorageBuf[offset]);      // save to nvram
     }
 }
+// -------------------------------------------------------------------------------------------------------
 // set element calculated flag
 void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<((element&3)<<1);
 }
+// -------------------------------------------------------------------------------------------------------
 // set signal rising flag
 void setRiseFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<(((element&3)<<1)+1);
 }
+// -------------------------------------------------------------------------------------------------------
 // get element calculated flag
 char getCalcFlag(tElemIndex element)
 {
    return fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1))?1:0;
 }
+// -------------------------------------------------------------------------------------------------------
 // get signal rising flag
 char getRiseFlag(tElemIndex element)
 {
     return fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1))?1:0;
 }
+// -------------------------------------------------------------------------------------------------------
 // abs value for type tSignal
 tSignal intAbs(tSignal val)
 {
@@ -684,7 +755,7 @@ typedef union {
     char B[4];
 #endif
 } teus;
-
+// -------------------------------------------------------------------------------------------------------
 tSignal lotobigsign(tSignal val)
 {
     teus uval;
@@ -711,7 +782,7 @@ typedef union {
     tSignal value;
     char B[2];
 } teui;
-
+// -------------------------------------------------------------------------------------------------------
 tElemIndex lotobigidx(tElemIndex val)
 {
     teui uval;
