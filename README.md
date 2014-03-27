@@ -436,7 +436,7 @@ Disabling definition `USE_HMI` allow slightly reduce the size of the library cod
 // speed optimization reduces the calculation time, but increases the size of memory (RAM) required
 #define SPEED_OPT
 ```
-Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin), network variables or stored NVRAM (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin), network variables or NVRAM values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
+Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin) or stored NVRAM (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin) or NVRAM values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
   * For discrete inputs and outputs use the values `0` and `1`.
   * For analogue inputs and outputs use the values expressed in engineering units, possibly with some decimal factor. For this, in some cases, the conversion function should perform PLC raw input data to engineering units and vice versa. For example the value of temperature sensor +10.5 C must be converted to a number 105.
   * Do not use a direct entry in the EEPROM because Library calls `FBDsetProc()` each time you change the value of any trigger or timer. Direct writing to EEPROM can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
@@ -451,10 +451,7 @@ tSignal FBDgetProc(char type, tSignal index)
         printf(" request InputPin(%d)\n", index);
         return 0;
     case 1:
-        printf(" request Variable(%d)\n", index);
-        return 0;
-    case 2:
-        printf(" request EEPROM(%d)\n", index);
+        printf(" request NVRAM(%d)\n", index);
         return 0;
     }
 }
@@ -467,10 +464,7 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
         printf(" set OutputPin(%d) to value %d\n", index, *value);
         break;
     case 1:
-        printf(" set Variable(%d) to value %d\n", index, *value);
-        break;
-    case 2:
-        printf(" set EEPROM(%d) to value %d\n", index, *value);
+        printf(" set NVRAM(%d) to value %d\n", index, *value);
         break;
     }
 }
