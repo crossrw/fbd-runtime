@@ -612,6 +612,9 @@ __period__ - time elapsed from the previous call.
 Each call results in the calculation of all the items and setting values of all output variables and pins.
 ### Timing
 Some elements of the schemes use time. For each such element library organizes independent timer value is stored in RAM. Timers used to store the type `tSignal`.  Timer values changes by `period` every time the function `fbdDoStep(tSignal period)` is called. Time can be expressed in any units: sec, ms, &micro;s. Unit selection depends on the time scale in which the PLC should work. In my opinion, a decent selection of milliseconds for most cases.
+Network variables
+=================
+
 Human machine interface (HMI)
 =============================
 The library contains basic functions support HMI. This can be used if your PLC has a display (LCD). You can make character or graphical menu with which to perform the following functions:
