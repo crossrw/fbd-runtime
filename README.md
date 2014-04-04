@@ -60,8 +60,8 @@ Calculation algorithm imposes certain restrictions on the possible options schem
 * Element can't have more than one output pin.
 * The scheme supports only one data type (`tSignal`). This applies to the inputs and outputs of the elements, values of the constants. The data type is determined at compile the project. Usually it is signed integer.
 
-Algorithm for calculating the state of the circuit
---------------------------------------------------
+Algorithm of circuit state calculating
+--------------------------------------
 Calculation of the state controller scheme executed cyclically with a certain period.
 Each cycle calculation circuit state is to calculate output signals to the output elements which are not connected to the circuit.
 Payment scheme in the following sequence:
