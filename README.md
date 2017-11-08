@@ -8,7 +8,7 @@ About FBD: http://en.wikipedia.org/wiki/Function_block_diagram.
 
 FBD - one of the programming languages described in the international standard IEC 61131-3. This implementation is not fully compatible with the standard, although many of its requirements are implemented.
 
-FBD editor and simulator can be downloaded at https://dl.dropboxusercontent.com/u/46913329/fbd2/fbd2setup.exe
+FBD editor and simulator can be downloaded at https://www.mnppsaturn.ru/fbd2/fbd2setup.exe
 
 A short video about the use of schema editor: http://youtu.be/KEGXHd6FIEI
 
@@ -28,7 +28,7 @@ The scheme is a set of elements and relationships between them.
 * Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value `==0`, a logical "1" - signal value `!=0`. Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (falling edge).
 
 Example of a simple scheme is shown below:
-![fbd demo](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/fbddemo.png)
+![fbd demo](https://www.mnppsaturn.ru/fbd2/images/fbddemo.png)
 
 Key features
 ------------
@@ -41,11 +41,11 @@ Key features
 * Support network variables (ModBus or something like that)
 * Basic HMI support
 
-![fbd struct](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/struct.png)
+![fbd struct](https://www.mnppsaturn.ru/fbd2/images/struct.png)
 
 Perfomance
 ----------
-One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used. The results of the pilot testing [scheme for 10 elements](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/generator.zip) are shown in the table below:
+One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used. The results of the pilot testing [scheme for 10 elements](https://www.mnppsaturn.ru/fbd2/images/generator.zip) are shown in the table below:
 <table>
 <tr><td><b>CPU@Freq</b></td><td><b>Compiler</b></td><td><b>Сycle time</b></td><td><b>One elem time (average)</b></td></tr>
 <tr><td>PIC18@9.83x4MHz</td><td>xc8 v1.21</td><td>~5ms</td><td>~500&micro;s</td></tr>
@@ -564,7 +564,7 @@ Summary table of types of elements below:
 #### Example
 For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
 
-![fbd example](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/demo2.png)
+![fbd example](https://www.mnppsaturn.ru/fbd2/images/demo2.png)
 
 Description of the scheme will be as follows (for the case when the `tSignal` is defined as `short`, `tElemIndex` - `unsigned char`):
 ```
@@ -585,7 +585,7 @@ Bytes description:
 Execution
 =========
 
-![fbd alg](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/alg.png)
+![fbd alg](https://www.mnppsaturn.ru/fbd2/images/alg.png)
 
 ### Initialization
 Initialization is performed once at the beginning. Initialization may be performed again in the case of change circuit or a PLC reset. To initialize you must first call the function:
@@ -621,11 +621,11 @@ The library contains basic functions support HMI. This can be used if your PLC h
  * View values of schema points (`Watchpoints`)
  * Set the values of set points (`Setpoints`)
 
-![fbd menu](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu2.png)
+![fbd menu](https://www.mnppsaturn.ru/fbd2/images/menu2.png)
 
 Watchpoints is used to display the values of the signals for operator. Setpoints are used to set the reference values, used in the operation of the circuit. Each watchpoint and setpoint has the associated text caption, that can be displayed on LCD. Moreover, for setpoints are stored maximum and minimum values of the signal that it can receive.
 
-![fbd menu2](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/menu3.png)
+![fbd menu2](https://https://www.mnppsaturn.ru/fbd2/images/menu3.png)
 
 To get the value of the watchpoint, use the function:
 ```
