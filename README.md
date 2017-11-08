@@ -1,4 +1,4 @@
-![fbd logo](https://dl.dropboxusercontent.com/u/46913329/fbd2/images/fbd2.png)
+![fbd logo](https://www.mnppsaturn.ru/fbd2/images/fbd2.png)
 fbd-runtime
 ===========
 
