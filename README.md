@@ -1,26 +1,26 @@
-# fbd-runtime
+# FBD-runtime
 
 ![fbd logo](https://www.mnppsaturn.ru/fbd2/images/fbd2.png)
 
-Run-time FBD library for PLC (*Programmable Logic Controller*).
+Библиотека выполнения программ на языке FBD для ПЛК (*Программируемых Логических Контроллеров*).
 
-About FBD: <http://en.wikipedia.org/wiki/Function_block_diagram>.
+Подробнее о языке FBD: <http://en.wikipedia.org/wiki/Function_block_diagram>.
 
-FBD - one of the programming languages described in the international standard IEC 61131-3. This implementation is not fully compatible with the standard, although many of its requirements are implemented.
+FBD - один из языков программирования описанных в международном стандарте IEC 61131-3. Данная реализация не полностью совместима с указанным стандартом, однако большинство его требований реализовано.
 
-FBD editor and simulator can be downloaded at <https://www.mnppsaturn.ru/fbd2/fbd2setup.exe>
+Редактор и симулятор выполнения программ FBD вы можете скачать по ссылке: <https://www.mnppsaturn.ru/fbd2/fbd2setup.exe>.
 
-A short video about the use of schema editor: <http://youtu.be/KEGXHd6FIEI>
+Небольшое видео об использовании редактора схем можно увидеть по адресу <http://youtu.be/KEGXHd6FIEI>.
 
 -------------------------------------------------------------------------------------
 
-## Appointment
+## Введение
 
 Language functional diagrams designed to describe the functioning of the single logic controller or multiple controllers connected information network. Language describes a scheme consisting of the elements and their binding chains.
 
-## Basic Concepts
+## Основные моменты
 
-The scheme is a set of elements and relationships between them.
+Схема на языке FBD это набор элементов и совокупность взаимоотношений между ними.
 
 * Circuit element is the minimum functional block that implements a specific operation (logic, arithmetic, delay, etc.) or provide connectivity with input or output hardware controller circuits. Each element may be greater than or equal to zero the number of signal inputs and zero or one output signal. Inputs are numbered element - a number from 0 to N-1 , where N - number of inputs. Number of inputs and outputs depends on the type of item. For each input item, usually must be connected an external circuit. Furthermore, the element may be greater than or equal to zero quantity affecting its functioning named parameters. Fixed values and are given in the design scheme. Each element must have a unique (within the scheme ), a name that will identify it. Elements that do not contain the output, usually serve to anchor chains scheme to hardware outputs of the controller or the formation of values, accessible through the data interface controller. Binding is defined by the parameters of the element. Elements that do not contain entries to serve as a source of fixed or alternating signal, whose value is given by a parameter. In addition, setting the value of the signal values of pixels may be accessed via an information controller interface.
 
@@ -28,41 +28,42 @@ The scheme is a set of elements and relationships between them.
 
 * Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value `==0`, a logical "1" - signal value `!=0`. Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (falling edge).
 
-Example of a simple scheme is shown below:
+Пример простой схемы показан ниже:
+
 ![fbd demo](https://www.mnppsaturn.ru/fbd2/images/fbddemo.png)
 
-## Key features
+## Основные возможности библиотеки
 
-* Not binded to a specific hardware and can be ported to any platform for which there is a C compiler
-* The algorithm is optimized for use in embedded controllers: PIC, AVR, ARM etc. Calculating does not use recursion, built data stack is used very sparingly
-* Support Big-Endian and Litle-Endian architectures
-* Small RAM memory requirements: scheme consists of 400 elements using only about 1 kb
-* Wide range of supported elements: logic, arithmetic, comparison, timers, triggers, PID. Set of elements can be easily expanded
-* Storing intermediate results in NVRAM (for flip-flop, timers, setpoints, etc)
-* Support network variables (ModBus or something like that)
-* Basic HMI support
+* Нет зависимости от аппаратуры и может быть использована на любой платформе где есть компилятор языка C
+* Алгоритм оптимизирован для встроенных контроллеров: PIC, AVR, ARM и т.п. Вычисление не использует рекурсию, стек данных используется очень экономно
+* Поддержка архитектур Big-Endian и Litle-Endian
+* Экономное использование RAM: схема из 400 элементов использует только около 1 kb ОЗУ
+* Широкий диапазон поддерживаемых элементов: логические, арифметические, сравнение, таймеры, триггеры, PID. Набор элементов может быть легко расширен
+* Сохранение промежуточных результатов в NVRAM (для триггеров, таймеров, точек регулирования и т.п.)
+* Поддержка работы по сети (Ethernet, ModBus или подобное)
+* Базовая поддержка интерфейса с оператором (HMI)
 
 ![fbd struct](https://www.mnppsaturn.ru/fbd2/images/struct.png)
 
-## Perfomance
+## Производительность
 
 One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used. The results of the pilot testing [scheme for 10 elements](https://www.mnppsaturn.ru/fbd2/images/generator.zip) are shown in the table below:
 <table>
-<tr><td><b>CPU@Freq</b></td><td><b>Compiler</b></td><td><b>Сycle time</b></td><td><b>One elem time (average)</b></td></tr>
+<tr><td><b>CPU@Freq</b></td><td><b>Компилятор</b></td><td><b>Длительность цикла</b></td><td><b>Расчет одного элемента (среднее)</b></td></tr>
 <tr><td>PIC18@9.83x4MHz</td><td>xc8 v1.21</td><td>~5ms</td><td>~500&micro;s</td></tr>
 <tr><td>Si8051@48MHz</td><td>Keil C51</td><td>~2.5ms</td><td>~250&micro;s</td></tr>
 <tr><td>ARM920T@180MHz</td><td>gcc v4.1.2</td><td>~61&micro;s</td><td>~6.1&micro;s</td></tr>
 <tr><td>i7-3770K@3.5GHz</td><td>gcc v4.4.1</td><td>~279ns</td><td>~27.9ns</td></tr>
 </table>
 
-## Limits
+## Ограничения
 
 Calculation algorithm imposes certain restrictions on the possible options scheme.
 
 * Element can't have more than one output pin.
 * The scheme supports only one data type (`tSignal`). This applies to the inputs and outputs of the elements, values of the constants. The data type is determined at compile the project. Usually it is signed integer.
 
-## Algorithm of circuit state calculating
+## Алгоритм расчета схемы
 
 Calculation of the state controller scheme executed cyclically with a certain period.
 Each cycle calculation circuit state is to calculate output signals to the output elements which are not connected to the circuit.
@@ -78,11 +79,11 @@ Payment scheme in the following sequence:
 
 The operation is performed for all selected items.
 
-## Elements by functions
+## Элементы по функциям
 
-### Input/Output/Const
+### Входы/Выходы/Константы
 
-#### Input pin
+#### Входной контакт
 
 ```
 | Pin >----
@@ -90,7 +91,7 @@ The operation is performed for all selected items.
 
 Element has one output, required for communication signal circuits to the input pin PLC.
 
-#### Output pin
+#### Выходной контакт
 
 ```
  ----< Pin |
