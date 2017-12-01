@@ -84,11 +84,12 @@ typedef unsigned short tElemIndex;
 // bit 7:   1
 
 // -------------------------------------------------------------------------------------------------------
-// Initialization functions
+// Инициализация схемы
 // -------------------------------------------------------------------------------------------------------
-// need call first, return amount of memory (RAM) required for calculating or (if error) negative value:
-// -1 - invalid element code in description
-// -2 - wrong sizeof tSignal or tElementIndex
+// Функция должна быть вызвана один раз в самом начале работы.
+// Результат: количество ОЗУ, необходимое для выполнения схемы (значение больше 0) или (в случае ошибки) отрицательное значение:
+// -1 - неверный код элемента в описании схемы
+// -2 - неверный размер tSignal или tElementIndex
 int fbdInit(DESCR_MEM unsigned char *descr);
 // need call after fbdInit(), set memory buf for calculating
 void fbdSetMemory(char *buf);

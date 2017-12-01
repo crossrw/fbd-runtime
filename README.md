@@ -2,39 +2,53 @@
 
 ![fbd logo](https://www.mnppsaturn.ru/fbd2/images/fbd2.png)
 
-Библиотека выполнения программ на языке FBD для ПЛК (*Программируемых Логических Контроллеров*).
+Библиотека предназначена для выполнения программ на языке FBD (*Язык функциональных диаграмм*) для ПЛК (*Программируемых Логических Контроллеров*).
 
-Подробнее о языке FBD: <http://en.wikipedia.org/wiki/Function_block_diagram>.
+Подробнее о языке FBD можно прочитать на сайте [Wikipedia](http://en.wikipedia.org/wiki/Function_block_diagram).
 
-FBD - один из языков программирования описанных в международном стандарте IEC 61131-3. Данная реализация не полностью совместима с указанным стандартом, однако большинство его требований реализовано.
+FBD - один из языков программирования описанных в международном стандарте IEC 61131-3. Данная реализация не полностью совместима с указанным стандартом, однако большинство его требований выполняется.
 
-Редактор и симулятор выполнения программ FBD вы можете скачать по ссылке: <https://www.mnppsaturn.ru/fbd2/fbd2setup.exe>.
+Редактор и симулятор выполнения программ FBD вы можете скачать по [ссылке](https://www.mnppsaturn.ru/fbd2/fbd2setup.exe).
 
-Небольшое видео об использовании редактора схем можно увидеть по адресу <http://youtu.be/KEGXHd6FIEI>.
+Доступно небольшое [видео](http://youtu.be/KEGXHd6FIEI) об использовании редактора схем.
 
 -------------------------------------------------------------------------------------
 
 ## Введение
 
-Language functional diagrams designed to describe the functioning of the single logic controller or multiple controllers connected information network. Language describes a scheme consisting of the elements and their binding chains.
+Язык функциональных диаграмм создан для описания функционирования одного или нескольких (соединенных через информационную сеть) логических контроллеров. Язык описывает входящие в состав схемы элементы и соединяющие их цепи.
 
-## Основные моменты
+## Основные понятия
 
-Схема на языке FBD это набор элементов и совокупность взаимоотношений между ними.
+Схема на языке FBD это набор элементов и соединений (цепей) между ними.
 
-* Circuit element is the minimum functional block that implements a specific operation (logic, arithmetic, delay, etc.) or provide connectivity with input or output hardware controller circuits. Each element may be greater than or equal to zero the number of signal inputs and zero or one output signal. Inputs are numbered element - a number from 0 to N-1 , where N - number of inputs. Number of inputs and outputs depends on the type of item. For each input item, usually must be connected an external circuit. Furthermore, the element may be greater than or equal to zero quantity affecting its functioning named parameters. Fixed values and are given in the design scheme. Each element must have a unique (within the scheme ), a name that will identify it. Elements that do not contain the output, usually serve to anchor chains scheme to hardware outputs of the controller or the formation of values, accessible through the data interface controller. Binding is defined by the parameters of the element. Elements that do not contain entries to serve as a source of fixed or alternating signal, whose value is given by a parameter. In addition, setting the value of the signal values of pixels may be accessed via an information controller interface.
+### Элемент
 
-* Chain is a logical connection between input and output elements and serves to transmit the signal states . Each circuit must be connected strictly one output element. State of the chain which is not connected to any output or connected more than one output of several elements is undefined , and a scheme in which to make such connections , incorrect. Chain, which is not connected to any input element is unused and its value is not calculated. Each chain has a unique (within the scheme) name. Chain with the same name are one chain.
+Элемент схемы это минимальный функциональный блок, выполняющий определенную операцию (логическую, арифметическую, задержку и т.п.) или обеспечивающий подключение схемы к входным или выходным цепям программируемого контроллера.
 
-* Chains are carriers of signals. The signal is expressed in a language in the form of integer values with a sign. In general, the signal is used to represent a single-byte, double-byte or four-byte signed integer. Due to the nature of hardware controllers can be used at the bit number. To perform logical operations, the logical "0" is defined as the signal value `==0`, a logical "1" - signal value `!=0`. Furthermore, the modifications of the signal value of the logical state "0" to logic "1" (rising edge), and from a logical "1" to logical "0" (falling edge).
+* Каждый элемент должен иметь уникальное в рамках схемы идентифицирующее его имя.
+* Элемент может иметь некоторое количество входов (а может и не иметь) и один или ни одного выхода. Количество входов и выходов зависит от типа элемента. На графическом изображении элементов входы всегда расположены слева, а выходы справа от элемента. Каждый вход элемента должен быть подключен к цепи, которая соединяет его с выходом другого элемента. Выход элемента может быть подключен к одному или нескольким входам других элементов (в том числе и его собственным входам). Выход элемента может быть никуда не подключен, в этом случае элемент не имеет смысла.
+* Элементы, которые не имеют выхода обычно используются для обозначения аппаратных выходов программируемого контроллера, выходных сетевых переменных или точек отображения.
+* Элементы, которые не имеют входа обычно используются для обозначения аппаратных входов программируемого контроллера, входных сетевых переменных или точек регулирования.
+* Элемент может иметь (а может и не иметь: это зависит от типа элемента) параметры, влияющие на его функционирование. Параметры имеют фиксированное значение и задаются при разработке схемы.
 
-Пример простой схемы показан ниже:
+### Цепь
+
+Цепь это логическая связь между входами и выходами элементов предназначенная для передачи состояния (значения) сигнала. Каждая цепь должна быть подключена строго к одному выходу и одному или нескольким входам элементов схемы. Состояние цепи к которой не подключен ни один выход элемента является неопределенным и схема в целом, при этом, является не корректной. Цепь, которая не подключена ни к одному входу элемента является не используемой и ее состояние не вычисляется. Аналогично элементам, цепи имеют уникальные в рамках схемы имена. Цепи служат для передачи значений сигналов между элементами схемы.
+
+### Сигнал
+
+Сигнал представляет собой целое число со знаком. В зависимости от параметров, указанных при сборке библиотеки, сигнал может занимать 1, 2 или 4 байта. Сигналы можно использовать для логических операций. При этом значение сигнала равное 0 интерпретируется как логический "0" (False), а значение сигнала не равное 0 - как логическая "1" (True). Для входов некоторых элементов важно не само значение сигнала, а факт его нарастания (передний фронт). Такие входы на графическом изображении элемента обозначены наклонной чертой. Факт наличия переднего фронта фиксируется при любом изменении сигнала в большую сторону (Si > Si-1). Элементы, выполняющие логические функции, формируют значение сигнала "1" для логической "1" и значение сигнала "0" для логического "0".
+
+### Пример схемы
+
+Пример простой схемы показан на рисунке:
 
 ![fbd demo](https://www.mnppsaturn.ru/fbd2/images/fbddemo.png)
 
 ## Основные возможности библиотеки
 
-* Нет зависимости от аппаратуры и может быть использована на любой платформе где есть компилятор языка C
+* Нет зависимости от аппаратуры, возможность применения на любой платформе где есть компилятор языка C
 * Алгоритм оптимизирован для встроенных контроллеров: PIC, AVR, ARM и т.п. Вычисление не использует рекурсию, стек данных используется очень экономно
 * Поддержка архитектур Big-Endian и Litle-Endian
 * Экономное использование RAM: схема из 400 элементов использует только около 1 kb ОЗУ
@@ -47,7 +61,7 @@ Language functional diagrams designed to describe the functioning of the single 
 
 ## Производительность
 
-One cycle calculation scheme is performed in the function call `fbdDoStep()`. During the cycle is a single account all elements and setting the values of all variables and output contacts. The computation time depends on many factors, primarily on the amount and type of components used. The results of the pilot testing [scheme for 10 elements](https://www.mnppsaturn.ru/fbd2/images/generator.zip) are shown in the table below:
+Один цикл вычисления схемы производится в ходе выполнения функции `fbdDoStep()`. В ходе одного цикла производится расчет значений всех элементов схемы и установка значений всех сетевых переменных и выходных контактов. Время расчета зависит от множества факторов, в первую очередь от количества и типов используемых элементов в схеме. Результаты тестирования времени выполнения небольшой схемы из 10 элементов (https://www.mnppsaturn.ru/fbd2/images/generator.zip) показаны в таблице:
 <table>
 <tr><td><b>CPU@Freq</b></td><td><b>Компилятор</b></td><td><b>Длительность цикла</b></td><td><b>Расчет одного элемента (среднее)</b></td></tr>
 <tr><td>PIC18@9.83x4MHz</td><td>xc8 v1.21</td><td>~5ms</td><td>~500&micro;s</td></tr>
@@ -58,107 +72,111 @@ One cycle calculation scheme is performed in the function call `fbdDoStep()`. Du
 
 ## Ограничения
 
-Calculation algorithm imposes certain restrictions on the possible options scheme.
+Используемый алгоритм расчета содержит определенные ограничения:
 
-* Element can't have more than one output pin.
-* The scheme supports only one data type (`tSignal`). This applies to the inputs and outputs of the elements, values of the constants. The data type is determined at compile the project. Usually it is signed integer.
-
-## Алгоритм расчета схемы
-
-Calculation of the state controller scheme executed cyclically with a certain period.
-Each cycle calculation circuit state is to calculate output signals to the output elements which are not connected to the circuit.
-Payment scheme in the following sequence:
-
-* for all circuits schemes establish a criterion of "no data";
-* scheme of all content elements to the output circuit which is not connected;
-* calculate the output value of the element:
-* Calculated value input element: if the chain is set sign "unknown", the calculated output value is connected to the circuit element, otherwise already taken the calculated value chain;
-* if in the process of circuit design need her own value (feedback loop), then used for the calculation of its previous value;
-* the value chain which has already been calculated, a sign of "no data" is reset;
-* the operation is performed on the input signal element (depending on the type of item).
-
-The operation is performed for all selected items.
+* Элемент не может иметь более одного выхода
+* Поддерживается только один тип данных (`tSignal`). Это относится ко всем входам и выходам всех элементов, значениям сигналов цепей, констант. Размерность типа данных определяется при компиляции проекта. Обычно используется тип целое число со знаком.
 
 ## Элементы по функциям
 
 ### Входы/Выходы/Константы
 
-#### Входной контакт
+#### Вход
 
-```
+Элемент имеет один выходной контакт. Входов у элемента нет. Элемент является источником значения сигнала для других подключенных к нему элементов. В зависимости от настроек, элемент может выполнять четыре разные функции:
+
+##### Связь с входным контактом контроллера
+
+```txt
 | Pin >----
 ```
 
-Element has one output, required for communication signal circuits to the input pin PLC.
+В этом случае у элемента имеется один параметр: номер контакта контроллера. Выходное значение сигнала элемента зависит от номера контакта и особенностей аппаратной реализации контроллера. Обычно используется для получения значений подключенных датчиков температуры, давления, состояния "сухих контактов".
 
-#### Выходной контакт
+##### Константа
 
-```
- ----< Pin |
-```
-
-Element has one input, his does not perform the any calculations, required for communication signal circuits to the output terminal of the PLC.
-Element has one output. The output value is always equal to a constant, determined at the time of schema design.
-
-#### Input variable
-
-```
- | Var >----
-```
-
-Element has one output, required for communication signal circuits to the input variable PLC. Value can be obtained from the network. This is one way of remote control state circuits.
-
-#### Output variable
-
-```
- ----< Var |
-```
-
-Element has one input, his does not perform the any calculations, required for communication signal circuits to the output variable PLC. You might want to pass a value to the variable on the network.
-
-#### Const value
-
-```
+```txt
  | Const >----
 ```
 
-### Logical
+В этом случае у элемента имеется один параметр: значение константы. Выходное значение сигнала элемента всегда соответствует значению параметра (константе).
 
-#### NOT
+##### Точка регулирования
 
+```txt
+ | SetPoint >----
 ```
+
+Точка регулирования необходима для реализации возможности корректировки значений настроек, используемых при вычислении схемы. В отличие от константы, значение выходного сигнала элемента может быть изменено эксплуатирующим персоналом (или наладчиком) контроллера. Изменение значения точки регулирование может быть организовано через средства человеко-машинного интерфейса (HMI) контроллера (клавиатуру, индикатор и т.п.).
+
+##### Входная сетевая переменная
+
+```txt
+ | Var >----
+```
+
+Библиотека предусматривает возможность подключения контроллера в информационную сеть, которая объединяет несколько однотипных или разнородных контроллеров. Такая сеть может быть построена с использованием интерфейсов Ethernet, RS-485, CAN и т.п. Значение выходного сигнала соответствует значению, полученному от другого контроллера по информационной сети. У элемента есть один параметр: номер сетевой переменной.
+
+#### Выход
+
+Элемент имеет один входной контакт. Выходов у элемента нет. В зависимости от настроек, элемент может выполнять две разные функции:
+
+##### Связь с выходным контактом контроллера
+
+```txt
+ ----< Pin |
+```
+
+У элемента имеется один параметр: номер выходного контакта контроллера. Интерпретация входного значения зависит от особенностей аппаратной реализации на конкретном контроллере. Обычно используется для управления дискретными и аналоговыми выходами контроллера.
+
+##### Выходная сетевая переменная
+
+```txt
+ ----< Var |
+```
+
+У элемента имеется один параметр: номер выходной сетевой переменной. Значение поданного на вход элемента сигнала передается по информационной сети и доступно на других контроллерах через элемент "Входная сетевая переменная".
+
+### Логические функции
+
+#### Инверсия
+
+```txt
     +---+
 ----|   O----
     +---+
 ```
 
-Traditional, often used element NOT. Includes one input and one output. Truth table:
+Элемент выполняет функцию логической инверсии "NOT". Элемент имеет один вход и один выход. Таблица истинности:
+
 <table>
- <tr><td><b>Input</b></td><td><b>Output</b></td></tr>
- <tr><td>Logical "0"</td><td>1</td></tr>
- <tr><td>Logical "1"</td><td>0</td></tr>
+ <tr><td><b>Вход</b></td><td><b>Выходной сигнал</b></td></tr>
+ <tr><td>Логический "0"</td><td>1</td></tr>
+ <tr><td>Логическая "1"</td><td>0</td></tr>
 </table>
 
-#### AND
+#### Логическое "И"
 
-```
+```txt
     +-----+                   +-----+
 ----|  &  |----           ----|  &  O----
 ----|     |               ----|     |
     +-----+                   +-----+
 ```
 
-Element has two inputs and one output. Truth table:
+Элемент выполняет логическую функцию "И" ("AND"). Элемент имеет два входа и один выход. Элемент имеет настройку инвертирования выходного сигнала.
+Таблица истинности:
+
 <table>
- <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
- <tr><td>Logical "0"</td><td>Any value</td><td>0</td><td>1</td></tr>
- <tr><td>Any value</td><td>Logical "0"</td><td>0</td><td>1</td></tr>
- <tr><td>Logical "1"</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
+ <tr><td><b>Вход 1</b></td><td><b>Вход 2</b></td><td><b>Выход</b></td><td><b>Инвертированный выход</b></td></tr>
+ <tr><td>Логический "0"</td><td>Любое значение</td><td>0</td><td>1</td></tr>
+ <tr><td>Any value</td><td>Логический "0"</td><td>0</td><td>1</td></tr>
+ <tr><td>Логическая "1"</td><td>Логическая "1"</td><td>1</td><td>0</td></tr>
 </table>
 
-#### OR
+#### Логическое "ИЛИ"
 
-```
+```txt
     +-----+                   +-----+
 ----|  1  |----           ----|  1  O----
 ----|     |               ----|     |
@@ -173,9 +191,9 @@ Element has two inputs and one output. Truth table:
  <tr><td>Any value</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
 </table>
 
-#### XOR
+#### Логическое "Исключающее ИЛИ" (XOR)
 
-```
+```txt
     +-----+                   +-----+
 ----|  =1 |----           ----|  =1 O----
 ----|     |               ----|     |
@@ -191,11 +209,11 @@ XOR element has two inputs and one output. Truth table:
  <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td><td>1</td></tr>
 </table>
 
-### Flip-flop
+### Триггеры
 
-#### SR latch
+#### RS-триггер
 
-```
+```txt
     +--+----+                +--+----+
 ----|R |   Q|----        ----|R |  Q O----
     |  |    |                |  |    |
@@ -215,9 +233,9 @@ Truth table:
 </table>
 At each change its latch value is stored in NVRAM (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 
-#### D flip-flop
+#### D-триггер
 
-```
+```txt
     +--+----+                +--+----+
 ----|D |  Q |----        ----|D |  Q O----
     |  |    |                |  |    |
@@ -236,9 +254,9 @@ Truth table:
 In difference from traditional D flip-flop, input (D) and output (Q) may be any value (not only "0" and "1").
 At each change its flip-flop value is stored in NVRAM (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
 
-#### Up-down counter
+#### Счётчик
 
-```
+```txt
     +--+----+
 ----/+ |   Q|----
 ----/- |    |
@@ -256,11 +274,11 @@ Element has three inputs and one output. If the input R high logic level, the ou
  <tr><td>Rising edge</td><td>Rising edge</td><td>0</td><td>Q</td><td>Not change</td></tr>
 </table>
 
-### Arithmetical
+### Арифметические функции
 
-#### Addition
+#### Сложение
 
-```
+```txt
     +-----+
 ----|  +  |----
 ----|     |
@@ -269,9 +287,9 @@ Element has three inputs and one output. If the input R high logic level, the ou
 
 Element has two inputs and one output. Output value is calculated as the arithmetic sum of the values of the input signals.
 
-#### Subtraction
+#### Вычитание
 
-```
+```txt
     +-----+
 ----|  -  |----
 ----|     |
@@ -280,9 +298,9 @@ Element has two inputs and one output. Output value is calculated as the arithme
 
 Element has two inputs and one output. Output value is calculated as the difference between the value of the signal at the first input signal and the value at the second input.
 
-#### Multiplication
+#### Умножение
 
-```
+```txt
     +-----+
 ----|  *  |----
 ----|     |
@@ -291,9 +309,9 @@ Element has two inputs and one output. Output value is calculated as the differe
 
 Element has two inputs and one output. The output value - the first and second multiplication signal. Overflow values are not controlled.
 
-#### Division
+#### Деление
 
-```
+```txt
     +-----+
 ----|  /  |----
 ----|     |
@@ -309,9 +327,9 @@ Element has two inputs and one output. The output value - the value of the signa
 </table>
 I know that you can not divide by 0. :)
 
-#### Absolute value
+#### Абсолютное значение
 
-```
+```txt
     +---+
 ----|Abs|----
     +---+
@@ -319,11 +337,11 @@ I know that you can not divide by 0. :)
 
 Output element value is the absolute value of the input signal.
 
-### Regulation
+### Регулирование
 
 #### PID
 
-```
+```txt
     +---+-----+
 ----|U  |    Q|----
 ----|Ref|     |
@@ -334,9 +352,9 @@ Output element value is the absolute value of the input signal.
 
 The calculation can not use the traditional PID algorithm. Instead, use the Euler method (anyway, that called him a good man, who told me about it). I heard somewhere that this algorithm is used for docking spacecraft. This algorithm has only two input parameters, quickly sets the output value and is not prone to fluctuations. Element has 4 inputs and one output. Inputs element are: U - current value controlled process, REF - reference value, DT - reaction time, P - proportionality factor. Features of the implementation can be found in the source code.
 
-#### Integrator
+#### Интегратор
 
-```
+```txt
     +---+----+
 ----|X  |   Q|----
 ----|DT |    |
@@ -346,11 +364,11 @@ The calculation can not use the traditional PID algorithm. Instead, use the Eule
 
 Element is used to integrate the input signal value. Can be used together with an element of PID. Element has three inputs: X - input value, DT - integrating constant, LIM - limiting the output value. Once a time DT calculated summa input signal value X with the previous value of the element. If the result is more LIM or less (-LIM), the output value will be truncated.
 
-### Timers
+### Таймеры
 
-#### Timer TON
+#### Таймер TON
 
-```
+```txt
     +--+------+                +--+------+
 ----|D | TON Q|----        ----|D | TON QO----
     |  |      |                |  |      |
@@ -366,7 +384,7 @@ Standart on-delay timer. It can be used as a signal generator with a given perio
  <tr><td>Logical "1"</td><td>Time T expired</td><td>1</td><td>0</td></tr>
 </table>
 
-```
+```txt
                    On-delay (TON) timing
 
     +------------+       +---+   +------------+
@@ -383,9 +401,9 @@ Q           |    |                       |    |
           t0+T   t1                    t4+T   t5
 ```
 
-#### Timer TP
+#### Таймер TP
 
-```
+```txt
     +--+------+                +--+------+
 ----/D |  TP Q|----        ----/D |  TP QO----
     |  |      |                |  |      |
@@ -395,7 +413,7 @@ Q           |    |                       |    |
 
 At timer two inputs (D and T) and one output. A rising edge starts the timer and sets the output signal 1. Output signal 1 remains until the timer expires. See diagram below:
 
-```
+```txt
                    Pulse (TP) timing
 
     +------------+       +-+ +-+     +------------+
@@ -413,11 +431,11 @@ Q   |       |            |       |   |       |
     t0    t0+T           t2    t2+T  t4    t4+T
 ```
 
-### Other
+### Остальные элементы
 
-#### Comparator
+#### Сравнение
 
-```
+```txt
     +-----+                  +-----+
 ----|  >  |----          ----|  >  O----
 ----|     |              ----|     |
@@ -431,9 +449,9 @@ Element compares the signal at its two inputs. Truth table:
  <tr><td>Input1Val &lt;= Input2Val</td><td>0</td><td>1</td></tr>
 </table>
 
-#### MAX
+#### Вычисление максимума
 
-```
+```txt
     +-----+
 ----| MAX |----
 ----|     |
@@ -447,9 +465,9 @@ Element has two inputs and one output. Element selects the maximum value of the 
  <tr><td>Input1Val &lt;= Input2Val</td><td>Input2Val</td></tr>
 </table>
 
-#### MIN
+#### Вычисление минимума
 
-```
+```txt
     +-----+
 ----| MIN |----
 ----|     |
@@ -463,9 +481,9 @@ Element has two inputs and one output. Element selects the minimum value of the 
  <tr><td>Input1Val &lt;= Input2Val</td><td>Input1Val</td></tr>
 </table>
 
-#### Multiplexer
+#### Мультиплексор
 
-```
+```txt
     +---+----+
 ----|D0 |   Q|----
 ----|D1 |    |
@@ -484,7 +502,7 @@ Extensible multiplexer. Element has five inputs (D0-D3, A) and one output. Selec
  <tr><td>3</td><td>D3</td></tr>
 </table>
 
-### Library setup
+### Установка библиотеки
 
 Setting is done by editing `fbdrt.h` in the following sequence.
 
@@ -567,9 +585,9 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
 }
 ```
 
-### Scheme description
+### Формат описания схемы
 
-#### Internals
+#### Внутреннее устройство
 
 Description of the scheme is an array of data that may be created by the editor or other means. Dataset should be placed in the memory controller, such as a FLASH or RAM. A pointer to the array is passed to a function `fbdInit(DESCR_MEM unsigned char *buf)`. The array consists of three parts:
 

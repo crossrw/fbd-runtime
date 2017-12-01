@@ -2,7 +2,7 @@
 #include "fbdrt.h"
 
 // -----------------------------------------------------------------------------
-// FBDgetProc() and FBDsetProc() - callback, must be present in main program
+// FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
 // FBDgetProc(): reading input signal or nvram
 // type - type of reading
@@ -35,10 +35,10 @@ tSignal lotobigsign(tSignal val);
 tElemIndex lotobigidx(tElemIndex val);
 #endif // defined
 
-// stack calculating item
+// элемент стека вычислений
 typedef struct {
-    tElemIndex index;               // index of element
-    unsigned char input;            // input number
+    tElemIndex index;               // индекс элемента
+    unsigned char input;            // номер входа
 } tFBDStackItem;
 
 void setCalcFlag(tElemIndex element);
@@ -50,26 +50,26 @@ char getRiseFlag(tElemIndex element);
 tSignal intAbs(tSignal val);
 
 // ----------------------------------------------------------
-// scheme description array (at ROM or RAM)
+// массив описания схемы (расположен в ROM или RAM)
 DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdDescrBuf;
-// data format:
-//  TypeElement1          <- elements types
+// формат данных:
+//  TypeElement1          <- тип элемента
 //  TypeElement2
 //  ...
 //  TypeElementN
-//  -1                    <- end flag
-// elements input descriptions
+//  -1                    <- флаг окончания описания элементов
+// описания входов элемента
 DESCR_MEM tElemIndex DESCR_MEM_SUFX *fbdInputsBuf;
-//  InputOfElement        <- elements inputs
+//  InputOfElement        <- вход элемента
 //  InputOfElement
 //  ..
-// parameters description
+// описания параметров элементов
 DESCR_MEM tSignal DESCR_MEM_SUFX *fbdParametersBuf;
-//  ParameterOfElement    <- parameter of element
+//  ParameterOfElement    <- параметр элемента
 //  ParameterOfElement
 //  ...
 #ifdef USE_HMI
-// HMI captions
+// текстовые описания для HMI 
 DESCR_MEM char DESCR_MEM_SUFX *fbdCaptionsBuf;
 //  text, 0               <- captions
 //  text, 0
@@ -77,9 +77,9 @@ DESCR_MEM char DESCR_MEM_SUFX *fbdCaptionsBuf;
 #endif // USE_HMI
 
 // ----------------------------------------------------------
-// calculating data array (only RAM)
+// массив расчета схемы (расположен только в RAM)
 tSignal *fbdMemoryBuf;
-// data format:
+// формат данных:
 //  OutputValue0
 //  OutputValue1
 //  ...
@@ -99,26 +99,27 @@ char *fbdFlagsBuf;
 //  ...
 //  FlagsN
 #ifdef SPEED_OPT
+// только при использовании оптимизации по скорости выполнения
 tOffset *inputOffsets;
-//  Offset of input 0 of element 0
-//  Offset of input 0 of element 1
+//  Смещение входа 0 элемента 0
+//  Смещение входа 0 элемента 1
 //  ...
-//  Offset of input 0 of element N
+//  Смещение входа 0 элемента N
 tOffset *parameterOffsets;
-//  Offset of parameter 0 of element 0
-//  Offset of parameter 0 of element 1
+//  Смещение параметра 0 элемента 0
+//  Смещение параметра 0 элемента 1
 //  ...
-//  Offset of parameter 0 of element N
+//  Смещение параметра 0 элемента N
 tOffset *storageOffsets;
-//  Offset of storage 0 of element 0
-//  Offset of storage 0 of element 1
+//  Смещение хранимого значения 0 элемента 0
+//  Смещение хранимого значения 1
 //  ...
-//  Offset of storage 0 of element N
+//  Смещение хранимого значения N
 #ifdef USE_HMI
-// struct for fast access to points
+// Структура для быстрого доступа к текстовым описаниям
 typedef struct {
     tElemIndex index;                           // point element index
-    DESCR_MEM char DESCR_MEM_SUFX *caption;     // pointer to text caption
+    DESCR_MEM char DESCR_MEM_SUFX *caption;     // указатель на текстовую строку
 } tPointAccess;
 //
 tPointAccess *wpOffsets;
@@ -141,11 +142,11 @@ char fbdFirstFlag;
 
 #define MAXELEMTYPEVAL 28u
 
-// inputs element count
+// массив с количествами входов для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2};
-// parameters element count
+// массив с количествами параметров для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2,0,0,0,0,0};
-// saved values count
+// массив с количествами хранимых данных для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0};
 //                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2
 //                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
@@ -463,18 +464,18 @@ tOffset fbdInputOffset(tElemIndex index)
 #endif // SPEED_OPT
 }
 // -------------------------------------------------------------------------------------------------------
-// calculating element output value
+// расчет выходного значения элемента
 void fbdCalcElement(tElemIndex curIndex)
 {
-    tFBDStackItem FBDStack[FBDSTACKSIZE];       // stack to calculate
-    tFBDStackPnt FBDStackPnt;                   // stack pointer
-    unsigned char curInput;                     // current input of element
-    unsigned char inputCount;                   // number of inputs of the current element
+    tFBDStackItem FBDStack[FBDSTACKSIZE];       // стек вычислений
+    tFBDStackPnt FBDStackPnt;                   // указатель стека
+    unsigned char curInput;                     // текущий входной контакт элемента
+    unsigned char inputCount;                   // число входов текущего элемента
     tOffset baseInput;                          //
     tElemIndex inpIndex;
-    tSignal s1,s2,s3,s4,v;                      // inputs values
+    tSignal s1,s2,s3,s4,v;                      // значения сигналов на входе
     //
-    if(getCalcFlag(curIndex)) return;           // element already calculated
+    if(getCalcFlag(curIndex)) return;           // элемент уже рассчитан?
     //
     FBDStackPnt = 0;
     curInput = 0;
