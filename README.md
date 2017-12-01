@@ -91,7 +91,7 @@ FBD - один из языков программирования описанн
 | Pin >----
 ```
 
-В этом случае у элемента имеется один параметр: номер контакта контроллера. Выходное значение сигнала элемента зависит от номера контакта и особенностей аппаратной реализации контроллера. Обычно используется для получения значений подключенных датчиков температуры, давления, состояния "сухих контактов".
+В этом случае у элемента имеется один параметр: номер контакта контроллера. Выходное значение сигнала элемента зависит от номера контакта и особенностей аппаратной реализации контроллера. Обычно используется для получения значений подключенных дискретных входов, датчиков температуры, давления, АЦП и т.п. Активное состояние дискретного входа (замкнут, подано напряжение) должно соответствовать значению сигнала "1".
 
 ##### Константа
 
@@ -139,7 +139,7 @@ FBD - один из языков программирования описанн
 
 ### Логические функции
 
-#### Инверсия
+#### Инверсия (NOT)
 
 ```txt
     +---+
@@ -155,7 +155,7 @@ FBD - один из языков программирования описанн
  <tr><td>Логическая "1"</td><td>0</td></tr>
 </table>
 
-#### Логическое "И"
+#### Логическое "И" (AND)
 
 ```txt
     +-----+                   +-----+
@@ -174,7 +174,7 @@ FBD - один из языков программирования описанн
  <tr><td>Логическая "1"</td><td>Логическая "1"</td><td>1</td><td>0</td></tr>
 </table>
 
-#### Логическое "ИЛИ"
+#### Логическое "ИЛИ" (OR)
 
 ```txt
     +-----+                   +-----+
@@ -183,12 +183,14 @@ FBD - один из языков программирования описанн
     +-----+                   +-----+
 ```
 
-Element has two inputs and one output. Truth table:
+Элемент выполняет логическую функцию "ИЛИ" ("OR"). Элемент имеет два входа и один выход. Элемент имеет настройку инвертирования выходного сигнала.
+Таблица истинности:
+
 <table>
- <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
- <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td><td>1</td></tr>
- <tr><td>Logical "1"</td><td>Any value</td><td>1</td><td>0</td></tr>
- <tr><td>Any value</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
+ <tr><td><b>Вход 1</b></td><td><b>Вход 2</b></td><td><b>Выход</b></td><td><b>Инвертированный выход</b></td></tr>
+ <tr><td>Логический "0"</td><td>Логический "0"</td><td>0</td><td>1</td></tr>
+ <tr><td>Логическая "1"</td><td>Любое значение</td><td>1</td><td>0</td></tr>
+ <tr><td>Любое значение</td><td>Логическая "1"</td><td>1</td><td>0</td></tr>
 </table>
 
 #### Логическое "Исключающее ИЛИ" (XOR)
@@ -200,13 +202,14 @@ Element has two inputs and one output. Truth table:
     +-----+                   +-----+
 ```
 
-XOR element has two inputs and one output. Truth table:
+Элемент выполняет логическую функцию "Исключающее ИЛИ" ("XOR"). Элемент имеет два входа и один выход. Элемент имеет настройку инвертирования выходного сигнала. Таблица истинности:
+
 <table>
  <tr><td><b>Input 1</b></td><td><b>Input 2</b></td><td><b>Output</b></td><td><b>Inverse output</b></td></tr>
- <tr><td>Logical "0"</td><td>Logical "0"</td><td>0</td><td>1</td></tr>
- <tr><td>Logical "0"</td><td>Logical "1"</td><td>1</td><td>0</td></tr>
- <tr><td>Logical "1"</td><td>Logical "0"</td><td>1</td><td>0</td></tr>
- <tr><td>Logical "1"</td><td>Logical "1"</td><td>0</td><td>1</td></tr>
+ <tr><td>Логический "0"</td><td>Логический "0"</td><td>0</td><td>1</td></tr>
+ <tr><td>Логический "0"</td><td>Логическая "1"</td><td>1</td><td>0</td></tr>
+ <tr><td>Логическая "1"</td><td>Логический "0"</td><td>1</td><td>0</td></tr>
+ <tr><td>Логическая "1"</td><td>Логическая "1"</td><td>0</td><td>1</td></tr>
 </table>
 
 ### Триггеры
@@ -231,7 +234,8 @@ Truth table:
  <tr><td>1</td><td>0</td><td>1</td><td>Set</td></tr>
  <tr><td>1</td><td>1</td><td>?</td><td>Not allowed</td></tr>
 </table>
-At each change its latch value is stored in NVRAM (function is called `FBDsetProc(2, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(2, index)`).
+
+At each change its latch value is stored in NVRAM (function is called `FBDsetProc(1, index, *value)`). At initialization scheme attempts to restore its value (the function is called `FBDgetProc(1, index)`).
 
 #### D-триггер
 
