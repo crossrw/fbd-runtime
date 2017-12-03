@@ -145,11 +145,11 @@ char fbdFirstFlag;
 // массив с количествами входов для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,2,0,0,0,0,0};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5,0,0,0,0,0};
 // массив с количествами хранимых данных для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0};
-//                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2
-//                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
+//                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2
+//                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
 
 // -------------------------------------------------------------------------------------------------------
 int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
@@ -220,20 +220,20 @@ void fbdSetMemory(char *buf)
 #endif // USE_HMI
 #endif // SPEED_OPT
     fbdMemoryBuf = (tSignal *)buf;
-    // init memory pointers
+    // инициализация указателей
     fbdStorageBuf = fbdMemoryBuf + fbdElementsCount;
     fbdFlagsBuf = (char *)(fbdStorageBuf + fbdStorageCount);
-    // init memory buf
+    // инициализация памяти
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
-    // restore triggers values from nvram
+    // восстановление значений триггеров из nvram
     for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(1, i);
 #ifdef SPEED_OPT
-    // init fast access buffers
+    // инициализация буферов быстрого доступа
     inputOffsets = (tOffset *)(fbdFlagsBuf + fbdFlagsByteCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
     storageOffsets = parameterOffsets + fbdElementsCount;
 #ifdef USE_HMI
-    // init buffer for fast access to watch- and set- points
+    // инициализация буферов для быстрого доступа к watch- и set- points
     wpOffsets = (tPointAccess *)(storageOffsets + fbdElementsCount);
     spOffsets = wpOffsets + fbdWpCount;
     curCap = fbdCaptionsBuf;
@@ -268,14 +268,15 @@ void fbdSetMemory(char *buf)
 #endif // SPEED_OPT
     //
 #ifdef USE_HMI
-    // HMI setpoints initialization
+    // инициализация значений точек регулирования (HMI setpoints)
     i = 0;
     while(fbdHMIgetSP(i, &HMIdata)) {
-        if(HMIdata.value > HMIdata.upperLimit) fbdHMIsetSP(i, HMIdata.upperLimit); else
-        if(HMIdata.value < HMIdata.lowlimit) fbdHMIsetSP(i, HMIdata.lowlimit);
+        // если значение точки регулирования не корректное, то устанавливаем значение по умолчанию
+        if((HMIdata.value > HMIdata.upperLimit)||(HMIdata.value < HMIdata.lowlimit)) fbdHMIsetSP(i, HMIdata.defValue);
         i++;
     }
 #endif // USE_HMI
+    //
     fbdFirstFlag = 1;
 }
 // -------------------------------------------------------------------------------------------------------
@@ -390,6 +391,9 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     (*pnt).value = fbdMemoryBuf[elemIndex];
     (*pnt).lowlimit = fbdGetParameter(elemIndex, 0);
     (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
+    (*pnt).defValue = fbdGetParameter(elemIndex, 2);
+    (*pnt).divider = fbdGetParameter(elemIndex, 3);
+    (*pnt).step = fbdGetParameter(elemIndex, 4);
     return true;
 }
 // -------------------------------------------------------------------------------------------------------
@@ -419,6 +423,7 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
     (*pnt).caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
     (*pnt).value = fbdMemoryBuf[elemIndex];
+    (*pnt).divider = fbdGetParameter(elemIndex, 0);
     return true;
 }
 // -------------------------------------------------------------------------------------------------------

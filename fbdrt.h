@@ -4,34 +4,41 @@
 #include <stdbool.h>       // For true/false definition
 
 // =========================================================================
-// = begin tuning ==========================================================
-// byte order
-//#define BIG_ENDIAN
-// size of FBD signal
-#define SIGNAL_SIZE 2
-// size of element index
-#define INDEX_SIZE 1
+// = начало настроек =======================================================
 //
-// data in ROM/FLASH
+// определение порядка байт, по умолчанию используется LOW_ENDIAN
+//#define BIG_ENDIAN
+//
+// размер памяти для сигнала схемы (1, 2 или 4)
+#define SIGNAL_SIZE 4
+//
+// размер пямяти для индекса элемента (1 или 2)
+#define INDEX_SIZE 2
+//
+// префикс и суфикс используемые для определения памяти в ROM или FLASH
 #define ROM_CONST const
 #define ROM_CONST_SUFX
-// schema description
+//
+// префикс и суфикс используемые для определения памяти в которой хранится описание схемы
 #define DESCR_MEM const
 #define DESCR_MEM_SUFX
 //
-// needed if you use HMI functions
+// нобходимо определить символ USE_HMI если планируете использовать функции HMI
 #define USE_HMI
-// speed optimization reduces the calculation time, but increases
-// the size of memory (RAM) required
+//
+// определив символ SPEED_OPT вы увеличите скорость выполнения схемы за счет увеличения размера необходимого RAM
 //#define SPEED_OPT
-// stack size fo calculating, one stack element size =(sizeof(tElemIndex)+1) байт
+//
+// максимальный размер стека, используемый при расчете схемы
+// один элемент стека занимает (sizeof(tElemIndex)+1) байт
 #define FBDSTACKSIZE 32
+//
 // data type for stack pointer
 typedef unsigned char tFBDStackPnt;
 //
 typedef long tLongSignal;
 //
-// = end tuning ============================================================
+// = конец настроек ========================================================
 // =========================================================================
 //
 typedef unsigned short tOffset;
@@ -91,6 +98,8 @@ typedef unsigned short tElemIndex;
 // -1 - неверный код элемента в описании схемы
 // -2 - неверный размер tSignal или tElementIndex
 int fbdInit(DESCR_MEM unsigned char *descr);
+//
+//
 // need call after fbdInit(), set memory buf for calculating
 void fbdSetMemory(char *buf);
 //
@@ -101,7 +110,7 @@ void fbdSetMemory(char *buf);
 void fbdDoStep(tSignal period);
 
 // -------------------------------------------------------------------------------------------------------
-// Network Slave support
+// Network support
 // -------------------------------------------------------------------------------------------------------
 // set net variable value
 void fbdSetNetVar(tSignal index, tSignal value);
@@ -111,12 +120,15 @@ bool fbdGetNetVar(tSignal index, tSignal *value);
 #ifdef USE_HMI
 // HMI
 // -------------------------------------------------------------------------------------------------------
-// stack calculating item
+// структура описания точки контроля или регулирования
 typedef struct {
-    tSignal value;              // current point value
-    tSignal lowlimit;           // low limit for value (only for setpoints)
-    tSignal upperLimit;         // upper limit for value (only for setpoints)
-    DESCR_MEM char *caption;    // text caption
+    tSignal value;              // текущее значение точки
+    tSignal lowlimit;           // нижний предел значения (только для точек регулирования)
+    tSignal upperLimit;         // верхний предел значения (только для точек регулирования)
+    tSignal defValue;           // значение "по умолчанию" (только для точек регулирования)
+    tSignal divider;            // делитель для отображения на индикаторе
+    tSignal step;               // шаг регулирования (только для точек регулирования)
+    DESCR_MEM char *caption;    // текстовая надпись
 } tHMIdata;
 // get Setting Point
 bool fbdHMIgetSP(tSignal index, tHMIdata *pnt);
