@@ -140,7 +140,7 @@ FBD - один из языков программирования описанн
 
 ### Цепь
 
-Цепь это логическая связь между входами и выходами элементов предназначенная для передачи состояния (значения) сигнала. Каждая цепь должна быть подключена строго к одному выходу и одному или нескольким входам элементов схемы. Состояние цепи к которой не подключен ни один выход элемента является неопределенным и схема в целом, при этом, является не корректной. Цепь, которая не подключена ни к одному входу элемента, является не используемой и ее состояние не вычисляется. Аналогично элементам, цепи имеют уникальные в рамках схемы имена. Цепи служат для передачи значений сигналов между элементами схемы. На графическом изображении схемы цепи изображаются в виде линий, которые соединяют входы и выходы элементов.
+Цепь это логическая связь между входами и выходами элементов предназначенная для передачи состояния (значения) сигнала. Каждая цепь должна быть подключена строго к одному выходу и одному или нескольким входам элементов схемы. Состояние цепи к которой не подключен ни один выход элемента является неопределенным. Цепь, которая не подключена ни к одному входу элемента, является не используемой и ее состояние не вычисляется. Аналогично элементам, цепи имеют уникальные в рамках схемы имена. Цепи служат для передачи значений сигналов между элементами схемы. На графическом изображении схемы цепи изображаются в виде линий, которые соединяют входы и выходы элементов.
 
 <a name="a2.3"></a>
 
@@ -514,20 +514,7 @@ TON - это таймер с задержкой включения. Элемен
 
 Временная диаграмма таймера TON:
 
-```txt
-    +------------+       +---+   +------------+
-D   |            |       |   |   |            |
-  --+            +-------+   +---+            +--------------
-    t0           t1      t2  t3  t4           t5
-            +----+                       +----+
-Q           |    |                       |    |
-  ----------+    +-----------------------+    +--------------
-          t0+T   t1                    t4+T   t5
-_ ----------+    +-----------------------+    +--------------
-Q           |    |                       |    |
-            +----+                       +----+
-          t0+T   t1                    t4+T   t5
-```
+![dton](https://www.mnppsaturn.ru/fbd2/images/dton.png)
 
 <a name="a5.6.2"></a>
 
@@ -545,21 +532,7 @@ Q           |    |                       |    |
 
 Временная диаграмма таймера TP:
 
-```txt
-    +------------+       +-+ +-+     +------------+
-D   |            |       | | | |     |            |
-  --+            +-------+ +-+ +-----+            +-----
-    t0           t1      t2  t3      t4           t5
-    +-------+            +-------+   +-------+
-Q   |       |            |       |   |       |
-  --+       +------------+       +---+       +----------
-    t0    t0+T           t2    t2+T  t4    t4+T
-
-_ --+       +------------+       +---+       +----------
-Q   |       |            |       |   |       |
-    +-------+            +-------+   +-------+
-    t0    t0+T           t2    t2+T  t4    t4+T
-```
+![dtp](https://www.mnppsaturn.ru/fbd2/images/dtp.png)
 
 <a name="a5.7"></a>
 
@@ -646,8 +619,8 @@ Setting is done by editing `fbdrt.h` in the following sequence.
 1. Select the data type used to store the signal.
 2. Select the data type used to store the index of the item.
 3. If necessary, change the definition `ROM_CONST` and `DESCR_MEM`.
-4. Сhoose to use or not to use optimization execution speed (defines `SPEED_OPT`).
-5. Сhoose to use or not to use HMI functions (defines `USE_HMI`).
+4. Choose to use or not to use optimization execution speed (defines `SPEED_OPT`).
+5. Choose to use or not to use HMI functions (defines `USE_HMI`).
 6. Write your implementation functions `FBDgetProc()` and `FBDsetProc()`.
 
 On the choice of the type of data signal depends with what signals can work your scheme. In addition, it affects memory usage and speed of calculation. For embedded microcontrollers that can be important. In general, the data type must describe signed integer. If you are not sure what to choose, use a 2-byte integer. In addition, you must specify the maximum and minimum value of the signal. For example, you can use the definition from limits.h. For example:
