@@ -388,7 +388,8 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     //
     (*pnt).caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
-    (*pnt).value = fbdMemoryBuf[elemIndex];
+    //(*pnt).value = fbdMemoryBuf[elemIndex];
+    (*pnt).value = fbdGetStorage(elemIndex, 0);
     (*pnt).lowlimit = fbdGetParameter(elemIndex, 0);
     (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
     (*pnt).defValue = fbdGetParameter(elemIndex, 2);
@@ -407,7 +408,8 @@ void fbdHMIsetSP(tSignal index, tSignal value)
 #else
     if(!fbdGetElementIndex(index, 23, &elemIndex)) return;
 #endif // SPEED_OPT
-    if(fbdMemoryBuf[elemIndex] != value) fbdSetStorage(elemIndex, 0, value);
+    //if(fbdMemoryBuf[elemIndex] != value) fbdSetStorage(elemIndex, 0, value);
+    fbdSetStorage(elemIndex, 0, value);
 }
 // -------------------------------------------------------------------------------------------------------
 // get Watch Point
@@ -690,7 +692,7 @@ tSignal fbdGetParameter(tElemIndex element, unsigned char index)
 #endif // SPEED_OPT
 }
 // -------------------------------------------------------------------------------------------------------
-// get value of elemnt memory
+// get value of element memory
 tSignal fbdGetStorage(tElemIndex element, unsigned char index)
 {
 #ifdef SPEED_OPT
