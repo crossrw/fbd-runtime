@@ -130,12 +130,26 @@ typedef struct {
     tSignal step;               // шаг регулирования (только для точек регулирования)
     DESCR_MEM char *caption;    // текстовая надпись
 } tHMIdata;
-// get Setting Point
+//
+// получить значение точки регулирования
 bool fbdHMIgetSP(tSignal index, tHMIdata *pnt);
-// set Setting Point
+//
+// установить значение точки регулирования
 void fbdHMIsetSP(tSignal index, tSignal value);
-// get Watch Point
+//
+// получить значение точки контроля
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt);
+//
+// структура описания проекта
+typedef struct {
+    DESCR_MEM char *name;       // наименование проекта
+    DESCR_MEM char *version;    // версия проекта
+    DESCR_MEM char *btime;      // дата и время компиляции
+} tHMIdescription;
+//
+// получить структуру с описанием проекта
+void fbdHMIgetDescription(tHMIdescription *pnt);
+//
 #endif // USE_HMI
 
 #endif	// FBDRT_H

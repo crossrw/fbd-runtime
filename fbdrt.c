@@ -25,12 +25,16 @@ void fbdCalcElement(tElemIndex index);
 tSignal fbdGetParameter(tElemIndex element, unsigned char index);
 tSignal fbdGetStorage(tElemIndex element, unsigned char index);
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
+
 #if defined(USE_HMI) && !defined(SPEED_OPT)
 DESCR_MEM char DESCR_MEM_SUFX * DESCR_MEM_SUFX fbdGetCaption(tElemIndex index);
+DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex);
 #endif // defined
+
 #if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
 tSignal lotobigsign(tSignal val);
 #endif // defined
+
 #if defined(BIG_ENDIAN) && (INDEX_SIZE > 1)
 tElemIndex lotobigidx(tElemIndex val);
 #endif // defined
@@ -115,6 +119,7 @@ tOffset *storageOffsets;
 //  Смещение хранимого значения 1
 //  ...
 //  Смещение хранимого значения N
+
 #ifdef USE_HMI
 // Структура для быстрого доступа к текстовым описаниям
 typedef struct {
@@ -375,7 +380,7 @@ bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex
 #endif // SPEED_OPT
 // HMI functions
 // -------------------------------------------------------------------------------------------------------
-// get Setting Point
+// получить значение точки регулирования
 bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex;
@@ -388,7 +393,6 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     //
     (*pnt).caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
-    //(*pnt).value = fbdMemoryBuf[elemIndex];
     (*pnt).value = fbdGetStorage(elemIndex, 0);
     (*pnt).lowlimit = fbdGetParameter(elemIndex, 0);
     (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
@@ -398,7 +402,7 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     return true;
 }
 // -------------------------------------------------------------------------------------------------------
-// set Setting Point
+// установить значение точки регулирования
 void fbdHMIsetSP(tSignal index, tSignal value)
 {
     tElemIndex elemIndex;
@@ -408,11 +412,10 @@ void fbdHMIsetSP(tSignal index, tSignal value)
 #else
     if(!fbdGetElementIndex(index, 23, &elemIndex)) return;
 #endif // SPEED_OPT
-    //if(fbdMemoryBuf[elemIndex] != value) fbdSetStorage(elemIndex, 0, value);
     fbdSetStorage(elemIndex, 0, value);
 }
 // -------------------------------------------------------------------------------------------------------
-// get Watch Point
+// получить значение точки контроля
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex = 0;
@@ -429,8 +432,16 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
     return true;
 }
 // -------------------------------------------------------------------------------------------------------
-// get pointer to caption
+// получить структуру с описанием проекта
+void fbdHMIgetDescription(tHMIdescription *pnt)
+{
+    (*pnt).name = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount);
+    (*pnt).version = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1);
+    (*pnt).btime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2);
+}
 #ifndef SPEED_OPT
+// -------------------------------------------------------------------------------------------------------
+// расчет указателя на текстовое описание элемента по индексу элемента
 DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
 {
     tElemIndex captionIndex, index;
@@ -445,6 +456,12 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
                 break;
         }
     }
+    return fbdGetCaptionByIndex(captionIndex);
+}
+// -------------------------------------------------------------------------------------------------------
+// расчет указателя на текстовое описание элемента по индексу описания
+DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex)
+{
     tOffset offset = 0;
     while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
     return &fbdCaptionsBuf[offset];
@@ -453,7 +470,7 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
 #endif // USE_HMI
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
-// calc offset of first element input
+// расчет смещения на первый вход элемента
 #ifdef SPEED_OPT
 inline tOffset fbdInputOffset(tElemIndex index)
 #else
@@ -724,13 +741,13 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
     }
 }
 // -------------------------------------------------------------------------------------------------------
-// set element calculated flag
+// установить признак "Элемент вычислен"
 void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<((element&3)<<1);
 }
 // -------------------------------------------------------------------------------------------------------
-// set signal rising flag
+// установка rising flag
 void setRiseFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<(((element&3)<<1)+1);
@@ -742,13 +759,13 @@ char getCalcFlag(tElemIndex element)
    return fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1))?1:0;
 }
 // -------------------------------------------------------------------------------------------------------
-// get signal rising flag
+// получение rising flag
 char getRiseFlag(tElemIndex element)
 {
     return fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1))?1:0;
 }
 // -------------------------------------------------------------------------------------------------------
-// abs value for type tSignal
+// расчет абсолютного значения сигнала
 tSignal intAbs(tSignal val)
 {
     return (val>=0)?val:-val;
