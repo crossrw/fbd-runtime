@@ -27,11 +27,11 @@
 #define USE_HMI
 //
 // определив символ SPEED_OPT вы увеличите скорость выполнения схемы за счет увеличения размера необходимого RAM
-//#define SPEED_OPT
+// #define SPEED_OPT
 //
 // максимальный размер стека, используемый при расчете схемы
 // один элемент стека занимает (sizeof(tElemIndex)+1) байт
-#define FBDSTACKSIZE 32
+#define FBDSTACKSIZE 128
 //
 // data type for stack pointer
 typedef unsigned char tFBDStackPnt;
