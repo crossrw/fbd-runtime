@@ -47,6 +47,7 @@ typedef struct {
 
 void setCalcFlag(tElemIndex element);
 void setRiseFlag(tElemIndex element);
+void setChangeVarFlag(tElemIndex element);
 
 char getCalcFlag(tElemIndex element);
 char getRiseFlag(tElemIndex element);
@@ -72,6 +73,11 @@ DESCR_MEM tSignal DESCR_MEM_SUFX *fbdParametersBuf;
 //  ParameterOfElement    <- параметр элемента
 //  ParameterOfElement
 //  ...
+// количество глобальных параметров схемы
+DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
+// глобальные параметры схемы
+DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
+//
 #ifdef USE_HMI
 // текстовые описания для HMI 
 DESCR_MEM char DESCR_MEM_SUFX *fbdCaptionsBuf;
@@ -96,12 +102,19 @@ tSignal *fbdStorageBuf;
 //  ...
 //  StorageN
 //
-// flags, 2 bits for each element (calculated and signal rising)
+// флаги "расчет выполнен" и "нарастающий фронт", 2 бита для каждого элемента
 char *fbdFlagsBuf;
 //  Flags0
 //  Flags1
 //  ...
 //  FlagsN
+// флаги "значение изменилось", 1 бит для каждого элемента "Output VAR" (14)
+char *fbdChangeVarBuf;
+//  ChangeVar0
+//  ChangeVar1
+//  ...
+//  ChangeVarN
+
 #ifdef SPEED_OPT
 // только при использовании оптимизации по скорости выполнения
 tOffset *inputOffsets;
@@ -135,6 +148,8 @@ tPointAccess *spOffsets;
 tElemIndex fbdElementsCount;
 tElemIndex fbdStorageCount;
 tElemIndex fbdFlagsByteCount;
+tElemIndex fbdChangeVarByteCount;
+
 #ifdef USE_HMI
 tElemIndex fbdWpCount;
 tElemIndex fbdSpCount;
@@ -155,7 +170,6 @@ ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] =
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0};
 //                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2
 //                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
-
 // -------------------------------------------------------------------------------------------------------
 int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
 {
@@ -165,6 +179,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     //
     fbdElementsCount = 0;
     fbdStorageCount = 0;
+    fbdChangeVarByteCount = 0;
 #ifdef USE_HMI
     fbdWpCount = 0;
     fbdSpCount = 0;
@@ -172,42 +187,55 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     //
     if(!buf) return -1;
     fbdDescrBuf = buf;
-
+    // цикл по всем элементам
     while(1) {
         elem = fbdDescrBuf[fbdElementsCount];
         if(elem & 0x80) break;
         elem &= ELEMMASK;
         if(elem > MAXELEMTYPEVAL) return -1;
+        // подсчет всех входов
         inputs += FBDdefInputsCount[elem];
+        // подсчет всех параметров
         parameters += FBDdefParametersCount[elem];
+        // подсчет всех хранимых параметров
         fbdStorageCount += FBDdefStorageCount[elem];
 #ifdef USE_HMI
         if(elem == 22) fbdWpCount++; else if(elem == 23) fbdSpCount++;
 #endif // USE_HMI
+        // подсчет выходных переменных
+        if(elem == 14) fbdChangeVarByteCount++; 
+        // общий подсчет элементов
         fbdElementsCount++;
     }
-    // check tSignal size
+    // проверка правильности флага завершения
     if(elem != END_MARK) return -2;
-    // calc pointers
+    // расчет указателей
     fbdInputsBuf = (DESCR_MEM tElemIndex DESCR_MEM_SUFX *)(fbdDescrBuf + fbdElementsCount + 1);
     fbdParametersBuf = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdInputsBuf + inputs);
+    fbdGlobalOptionsCount = (DESCR_MEM unsigned char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
+    fbdGlobalOptions = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdGlobalOptionsCount + 1);
+    if(*fbdGlobalOptions != FBD_LIB_VERSION) return -3;
+
 #ifdef USE_HMI
-    fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
+    fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
 #endif // USE_HMI
+    // память для флагов расчета и фронта
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&3)?1:0);
+    // память для флагов изменений значения выходной переменной
+    fbdChangeVarByteCount = (fbdChangeVarByteCount>>3) + ((fbdChangeVarByteCount&7)?1:0);
     //
 #ifdef SPEED_OPT
 #ifdef USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
 #else  // USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdElementsCount*3*sizeof(tOffset);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdElementsCount*3*sizeof(tOffset);
 #endif // USE_HMI
 #else  // SPEED_OPT
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount;
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount;
 #endif // SPEED_OPT
 }
 // -------------------------------------------------------------------------------------------------------
-void fbdSetMemory(char *buf)
+void fbdSetMemory(char *buf, bool needReset)
 {
     tElemIndex i;
 #ifdef USE_HMI
@@ -228,13 +256,23 @@ void fbdSetMemory(char *buf)
     // инициализация указателей
     fbdStorageBuf = fbdMemoryBuf + fbdElementsCount;
     fbdFlagsBuf = (char *)(fbdStorageBuf + fbdStorageCount);
-    // инициализация памяти
+    fbdChangeVarBuf = (char *)(fbdFlagsBuf + fbdFlagsByteCount);
+    // инициализация памяти (выходы элементов)
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
+    // инициализация памяти (установка всех флагов изменения значения)
+    fbdChangeAllNetVars();
     // восстановление значений триггеров из nvram
-    for(i = 0; i < fbdStorageCount; i++) fbdStorageBuf[i] = FBDgetProc(1, i);
+    for(i = 0; i < fbdStorageCount; i++) {
+        if(needReset) {
+            fbdStorageBuf[i] = 0;
+            FBDsetProc(1, i, &fbdStorageBuf[i]);
+        } else {
+            fbdStorageBuf[i] = FBDgetProc(1, i);
+        }
+    }
 #ifdef SPEED_OPT
     // инициализация буферов быстрого доступа
-    inputOffsets = (tOffset *)(fbdFlagsBuf + fbdFlagsByteCount);
+    inputOffsets = (tOffset *)(fbdChangeVarBuf + fbdChangeVarByteCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
     storageOffsets = parameterOffsets + fbdElementsCount;
 #ifdef USE_HMI
@@ -277,7 +315,7 @@ void fbdSetMemory(char *buf)
     i = 0;
     while(fbdHMIgetSP(i, &HMIdata)) {
         // если значение точки регулирования не корректное, то устанавливаем значение по умолчанию
-        if((HMIdata.value > HMIdata.upperLimit)||(HMIdata.value < HMIdata.lowlimit)) fbdHMIsetSP(i, HMIdata.defValue);
+        if(needReset||(HMIdata.value > HMIdata.upperLimit)||(HMIdata.value < HMIdata.lowlimit)) fbdHMIsetSP(i, HMIdata.defValue);
         i++;
     }
 #endif // USE_HMI
@@ -290,13 +328,13 @@ void fbdDoStep(tSignal period)
     tSignal value, param;
     tElemIndex index;
     unsigned char element;
-    // reset calculating and rising flags
+    // сброс признаков расчета и нарастающего фронта
     memset(fbdFlagsBuf, 0, fbdFlagsByteCount);
-    // main calculating loop
+    // основной цикл расчета
     for(index=0; index < fbdElementsCount; index++) {
         element = fbdDescrBuf[index] & ELEMMASK;
         switch(element) {
-            // elements with timer
+            // элементы с таймером
             case 12:                                                        // timer TON
             case 17:                                                        // PID
             case 18:                                                        // SUM
@@ -311,30 +349,28 @@ void fbdDoStep(tSignal period)
             case 0:                                                         // output PIN
                 fbdCalcElement(index);
                 param = fbdGetParameter(index, 0);
-                FBDsetProc(0, param, &fbdMemoryBuf[index]);                 // set output pin
+                FBDsetProc(0, param, &fbdMemoryBuf[index]);                 // установка значения выходного контакта
                 break;
             case 14:                                                        // output VAR
-                fbdCalcElement(index);
-                break;
 #ifdef USE_HMI
-            case 22:                                                        // watch point
+            case 22:                                                        // точка контроля
+#endif // USE_HMI
                 fbdCalcElement(index);
                 break;
-#endif // USE_HMI
         }
     }
     fbdFirstFlag = 0;
 }
 // -------------------------------------------------------------------------------------------------------
-// set net variable values
-void fbdSetNetVar(tSignal index, tSignal value)
+// установить значение переменной, принятое по сети
+void fbdSetNetVar(tNetVar *netvar)
 {
     tElemIndex i;
     //
     for(i=0; i < fbdElementsCount; i++) {
         if(fbdDescrBuf[i] == 16) {
-            if(fbdGetParameter(i, 0) == index) {
-                fbdSetStorage(i, 0, value);
+            if(fbdGetParameter(i, 0) == (*netvar).index) {
+                fbdSetStorage(i, 0, (*netvar).value);
                 return;
             }
         }
@@ -342,22 +378,34 @@ void fbdSetNetVar(tSignal index, tSignal value)
     return;
 }
 // -------------------------------------------------------------------------------------------------------
-// get net variable value
-bool fbdGetNetVar(tSignal index, tSignal *value)
+// получить значение переменной для отправки по сети
+bool fbdGetNetVar(tNetVar *netvar)
 {
-    tElemIndex i;
+    tElemIndex i, varindex;
     //
+    varindex = 0;
     for(i=0; i < fbdElementsCount; i++) {
         if(fbdDescrBuf[i] == 14) {
-            if(fbdGetParameter(i, 0) == index) {
-                *value = *(fbdMemoryBuf + i);
+            // проверяем установку флага изменений
+            if(fbdChangeVarBuf[varindex>>3]&(1u<<(varindex&7))) {
+                // флаг установлен, сбрасываем его
+                fbdChangeVarBuf[varindex>>3] &= ~(1u<<(varindex&7));
+                // номер переменной
+                (*netvar).index = fbdGetParameter(i, 0);
+                (*netvar).value = fbdMemoryBuf[i];
                 return true;
             }
+            varindex++;
         }
     }
     return false;
 }
-//
+// -------------------------------------------------------------------------------------------------------
+// установить для всех выходных сетевых переменных признак изменения
+void fbdChangeAllNetVars()
+{
+    if(fbdChangeVarByteCount > 0) memset(fbdChangeVarBuf, 255, fbdChangeVarByteCount);
+}
 //
 #ifdef USE_HMI
 #ifndef SPEED_OPT
@@ -439,6 +487,13 @@ void fbdHMIgetDescription(tHMIdescription *pnt)
     (*pnt).version = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1);
     (*pnt).btime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2);
 }
+// -------------------------------------------------------------------------------------------------------
+// получение значений глобальных настроек схемы
+tSignal fbdGetGlobalOptions(unsigned char option)
+{
+    return fbdGlobalOptions[option];
+}
+
 #ifndef SPEED_OPT
 // -------------------------------------------------------------------------------------------------------
 // расчет указателя на текстовое описание элемента по индексу элемента
@@ -545,8 +600,13 @@ void fbdCalcElement(tElemIndex curIndex)
             // вычисляем значение текущего элемента, результат в s1
             switch(fbdDescrBuf[curIndex] & ELEMMASK) {
                 case 0:                                                                 // OUTPUT PIN
-                case 14:                                                                // OUTPUT VAR
                 case 22:                                                                // HMI watchpoint
+                    break;
+                case 14:                                                                // OUTPUT VAR
+                    // при изменении значения сигнала ставим флаг
+                    if(fbdMemoryBuf[curIndex] != s1) {
+                        setChangeVarFlag(curIndex);
+                    }
                     break;
                 case 1:                                                                 // CONST
                     s1 = fbdGetParameter(curIndex, 0);
@@ -680,10 +740,10 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = s1 == s2;
                     break;
             }
-            setCalcFlag(curIndex);                                  // set calculated flag
-            if(fbdDescrBuf[curIndex] & INVERTFLAG) s1 = s1?0:1;     // inverse result if need
-            if(s1 > fbdMemoryBuf[curIndex]) setRiseFlag(curIndex);  // check rising edge
-            fbdMemoryBuf[curIndex] = s1;                            // save result to memory buf
+            setCalcFlag(curIndex);                                  // установка флага "вычисление выполнено"
+            if(fbdDescrBuf[curIndex] & INVERTFLAG) s1 = s1?0:1;     // инверсия результата (если нужно)
+            if(s1 > fbdMemoryBuf[curIndex]) setRiseFlag(curIndex);  // установка флага фронта (если он был)
+            fbdMemoryBuf[curIndex] = s1;                            // сохраняем результат в буфер
         }
         // текущий элемент вычислен, пробуем достать из стека родительский элемент
         if(FBDStackPnt--) {
@@ -691,7 +751,7 @@ void fbdCalcElement(tElemIndex curIndex)
             curInput = FBDStack[FBDStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
             baseInput = fbdInputOffset(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
             inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
-        } else break;                                       // calculation completed, if stack is empty
+        } else break;                                       // стек пуст, вычисления завершены
     } while(1);
 }
 // -------------------------------------------------------------------------------------------------------
@@ -741,7 +801,7 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
     }
 }
 // -------------------------------------------------------------------------------------------------------
-// установить признак "Элемент вычислен"
+// установить флаг "Элемент вычислен"
 void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<((element&3)<<1);
@@ -753,16 +813,27 @@ void setRiseFlag(tElemIndex element)
     fbdFlagsBuf[element>>2] |= 1u<<(((element&3)<<1)+1);
 }
 // -------------------------------------------------------------------------------------------------------
-// get element calculated flag
+// получение флага "Элемент вычислен"
 char getCalcFlag(tElemIndex element)
 {
    return fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1))?1:0;
 }
 // -------------------------------------------------------------------------------------------------------
-// получение rising flag
+// получение флага "rising flag"
 char getRiseFlag(tElemIndex element)
 {
     return fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1))?1:0;
+}
+// -------------------------------------------------------------------------------------------------------
+// установка флага изменения переменной
+void setChangeVarFlag(tElemIndex index)
+{
+    tElemIndex varIndex = 0;
+    // определяем номер флага
+    while(index--) {
+        if((fbdDescrBuf[index] & ELEMMASK) == 14) varIndex++;
+    }
+    fbdChangeVarBuf[varIndex>>3] |= 1u<<(varIndex&7);
 }
 // -------------------------------------------------------------------------------------------------------
 // расчет абсолютного значения сигнала
