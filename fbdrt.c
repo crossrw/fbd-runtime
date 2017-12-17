@@ -402,7 +402,7 @@ bool fbdGetNetVar(tNetVar *netvar)
 }
 // -------------------------------------------------------------------------------------------------------
 // установить для всех выходных сетевых переменных признак изменения
-void fbdChangeAllNetVars()
+void fbdChangeAllNetVars(void)
 {
     if(fbdChangeVarByteCount > 0) memset(fbdChangeVarBuf, 255, fbdChangeVarByteCount);
 }
