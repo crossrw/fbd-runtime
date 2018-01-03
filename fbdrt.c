@@ -340,6 +340,7 @@ void fbdDoStep(tSignal period)
             case 17:                                                        // PID
             case 18:                                                        // SUM
             case 24:                                                        // timer TP
+            case 32:                                                        // GEN
                 value = fbdGetStorage(index, 0);
                 if(value) {
                     value -= period;
