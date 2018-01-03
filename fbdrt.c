@@ -1,5 +1,5 @@
-#include "string.h"
 #include "fbdrt.h"
+#include <string.h>
 
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
@@ -160,16 +160,17 @@ char fbdFirstFlag;
 #define ELEMMASK 0x3F
 #define INVERTFLAG 0x40
 
-#define MAXELEMTYPEVAL 28u
+#define MAXELEMTYPEVAL 32u
 
 // массив с количествами входов для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5,0,0,0,0,0};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1};
 // массив с количествами хранимых данных для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0};
-//                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2
-//                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1};
+//                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3
+//                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+
 // -------------------------------------------------------------------------------------------------------
 int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
 {
@@ -738,6 +739,52 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 28:                                                                // EQ
                     s1 = s1 == s2;
+                    break;
+                case 29:                                                                // побитный AND
+                    s1 = s1 & s2;
+                    break;
+                case 30:                                                                // побитный OR
+                    s1 = s1 | s2;
+                    break;
+                case 31:                                                                // побитный XOR
+                    s1 = s1 ^ s2;
+                    break;
+                case 32:                                                                // генератор
+                    if(s1 > 0) {                                        // s1 - enable, период; s2 - амплитуда
+                        s3 = fbdGetStorage(curIndex, 0);                // s3 - остаток таймера периода
+                        if(s3) {
+                            switch (fbdGetParameter(curIndex, 0)) {     // тип генератора
+                                case 0:                                 // меандр
+                                    s1 = (s3 > (s1>>1))?0:s2;
+                                    break;
+                                case 1:                                 // пила
+                                    s1 = (s2*(s1-s3))/s1;
+                                    break;
+                                case 2:                                 // треугольник
+                                    if(s3 > (s1>>1)) {
+                                        // нарастание
+                                        s1 = 2*s2*(s1-s3)/s1;
+                                    } else {
+                                        // спад
+                                        s1 = 2*s2*s3/s1;
+                                    }
+                                    break;
+#if defined(USE_MATH)
+                                case 3:                                 // sin
+                                    s1 = roundl(s2 * sin((s1-s3)/s1*2*3.14));
+                                    break;
+#endif
+                            }
+                        } else {
+                            // запуск таймера
+                            fbdSetStorage(curIndex, 0, s1);
+                            // старт генератора с 0
+                            s1 = 0;
+                        }
+                    } else {
+                        // генератор остановлен
+                        s1 = 0;
+                    }
                     break;
             }
             setCalcFlag(curIndex);                                  // установка флага "вычисление выполнено"
