@@ -3,7 +3,7 @@
 
 #include <stdbool.h>       // For true/false definition
 
-#define FBD_LIB_VERSION 8
+#define FBD_LIB_VERSION 7
 //
 // версия 8: добавлены битовые операции и генератор
 //

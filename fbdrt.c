@@ -772,7 +772,7 @@ void fbdCalcElement(tElemIndex curIndex)
                                     break;
 #if defined(USE_MATH)
                                 case 3:                                 // sin
-                                    s1 = roundl(s2 * sin((s1-s3)/s1*2*3.14));
+                                    s1 = roundl(s2*sin(2.0*M_PI*(s1-s3)/s1));
                                     break;
 #endif
                             }
