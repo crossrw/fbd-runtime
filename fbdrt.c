@@ -215,7 +215,8 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     fbdParametersBuf = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdInputsBuf + inputs);
     fbdGlobalOptionsCount = (DESCR_MEM unsigned char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
     fbdGlobalOptions = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdGlobalOptionsCount + 1);
-    if(*fbdGlobalOptions != FBD_LIB_VERSION) return -3;
+    // проверка версии программы
+    if(*fbdGlobalOptions > FBD_LIB_VERSION) return -3;
 
 #ifdef USE_HMI
     fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
