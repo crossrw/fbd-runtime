@@ -1,6 +1,13 @@
 #include "fbdrt.h"
 #include <string.h>
 
+// 06-01-2018
+// + добавлены битовые операции
+// + добавлен генератор сигналов
+// + для входных сетевых переменных добавлено значение "по умолчанию"
+// * изменен способ проверки версии RTL
+// * добавлено определение USE_MATH, с ним для некоторых расчетов используется плавающая точка
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
@@ -165,7 +172,7 @@ char fbdFirstFlag;
 // массив с количествами входов для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1};
 // массив с количествами хранимых данных для элементов каждого типа
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1};
 //                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3
@@ -311,7 +318,16 @@ void fbdSetMemory(char *buf, bool needReset)
 #endif // USE_HMI
     }
 #endif // SPEED_OPT
-    //
+    // инициализация входных переменных
+    if(needReset) {
+        // при загрузке новой схемы значение входных сетевых переменных (до того, как они будут получены) равны 0, это не совсем хорошо...
+        // инициализируем их значениями "по умолчанию" из программы
+        for(i = 0; i < fbdElementsCount; i++) {
+            if(fbdDescrBuf[i] == 16) {
+                fbdSetStorage(i, 0, fbdGetParameter(i, 2));
+            }
+        }
+    }
 #ifdef USE_HMI
     // инициализация значений точек регулирования (HMI setpoints)
     i = 0;
@@ -760,18 +776,26 @@ void fbdCalcElement(tElemIndex curIndex)
                                     s1 = (s3 > (s1>>1))?0:s2;
                                     break;
                                 case 1:                                 // пила
+#ifdef USE_MATH                                
+                                    s1 = roundl(1.0*s2*(s1-s3)/s1);
+#else
                                     s1 = (s2*(s1-s3))/s1;
+#endif
                                     break;
                                 case 2:                                 // треугольник
                                     if(s3 > (s1>>1)) {
-                                        // нарастание
-                                        s1 = 2*s2*(s1-s3)/s1;
+#ifdef USE_MATH
+                                        s1 = roundl(2.0*s2*(s1-s3)/s1); // нарастание
                                     } else {
-                                        // спад
-                                        s1 = 2*s2*s3/s1;
+                                        s1 = roundl(2.0*s2*s3/s1);      // спад
+#else
+                                        s1 = 2*s2*(s1-s3)/s1;           // нарастание
+                                    } else {
+                                        s1 = 2*s2*s3/s1;                // спад
+#endif
                                     }
                                     break;
-#if defined(USE_MATH)
+#ifdef USE_MATH
                                 case 3:                                 // sin
                                     s1 = roundl(s2*sin(2.0*M_PI*(s1-s3)/s1));
                                     break;
