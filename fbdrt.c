@@ -324,7 +324,7 @@ void fbdSetMemory(char *buf, bool needReset)
         // инициализируем их значениями "по умолчанию" из программы
         for(i = 0; i < fbdElementsCount; i++) {
             if(fbdDescrBuf[i] == 16) {
-                fbdSetStorage(i, 0, fbdGetParameter(i, 2));
+                fbdSetStorage(i, 0, fbdGetParameter(i, 1));
             }
         }
     }
