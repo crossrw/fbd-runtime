@@ -31,11 +31,6 @@
 //
 // нобходимо определить символ USE_MATH если планируете использовать генератор sin
 #define USE_MATH
-
-#ifdef USE_MATH
-#include <math.h>       // для sin() и roundl()
-#endif
-
 //
 // определив символ SPEED_OPT вы увеличите скорость выполнения схемы за счет увеличения размера необходимого RAM
 // #define SPEED_OPT
@@ -52,6 +47,13 @@ typedef long tLongSignal;
 // = конец настроек ========================================================
 // =========================================================================
 //
+#ifdef USE_MATH
+#include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif // M_PI
+#endif // USE_MATH
+
 typedef unsigned short tOffset;
 //
 #if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
@@ -122,7 +124,8 @@ void fbdSetMemory(char *buf, bool needReset);
 // -------------------------------------------------------------------------------------------------------
 // Calculating function
 // -------------------------------------------------------------------------------------------------------
-// executing one step scheme calculating, period - time from the previous call fbdDoStep() in milliseconds
+// Функция выполняет один шаг вычисления схемы
+//  period - время с момента предыдущего вызова fbdDoStep(), например в милисекундах
 void fbdDoStep(tSignal period);
 
 // -------------------------------------------------------------------------------------------------------
