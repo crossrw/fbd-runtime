@@ -17,6 +17,9 @@
 *.out
 *.app
 
+# preprocessor
+*.j
+
 # vscode files
 .vscode/*
 !.vscode/settings.json

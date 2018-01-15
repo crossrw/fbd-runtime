@@ -1,5 +1,5 @@
-#include "fbdrt.h"
 #include <string.h>
+#include "fbdrt.h"
 
 // 06-01-2018
 // + добавлены битовые операции
@@ -8,35 +8,39 @@
 // * изменен способ проверки версии RTL
 // * добавлено определение USE_MATH, с ним для некоторых расчетов используется плавающая точка
 
+// 12-01-2018
+// * починил SPEED_OPT
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
-// FBDgetProc(): reading input signal or nvram
-// type - type of reading
-//  0 - input signal of MCU
-//  1 - nvram value
-// index - number (index) of reading signal
-// result - signal value
+// FBDgetProc(): чтение значения входного сигнала или NVRAM
+// type - тип чтения
+//  0 - входной сигнал
+//  1 - значение NVRAM
+// index - индекс читаемого значения
+// result - прочитанное значение сигнала
 extern tSignal FBDgetProc(char type, tSignal index);
 
-// FBDsetProc() writing output signal or nvram
-// type - type of writing
-//  0 - output signal of MCU
-//  1 - write to nvram
-// index - number (index) of writing signal
-// value - pointer to writing value
+// FBDsetProc() запись значения выходного сигнала или NVRAM
+// type - тип записи
+//  0 - запись выходного сигнала
+//  1 - запись в NVRAM
+// index - индекс записываемого значения
+// value - указатель на значение
 extern void FBDsetProc(char type, tSignal index, tSignal *value);
 // -----------------------------------------------------------------------------
 
+//
 void fbdCalcElement(tElemIndex index);
-tSignal fbdGetParameter(tElemIndex element, unsigned char index);
-tSignal fbdGetStorage(tElemIndex element, unsigned char index);
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
 
-#if defined(USE_HMI) && !defined(SPEED_OPT)
-DESCR_MEM char DESCR_MEM_SUFX * DESCR_MEM_SUFX fbdGetCaption(tElemIndex index);
+#ifdef USE_HMI
 DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex);
-#endif // defined
+#ifndef SPEED_OPT
+DESCR_MEM char DESCR_MEM_SUFX * DESCR_MEM_SUFX fbdGetCaption(tElemIndex index);
+#endif
+#endif
 
 #if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
 tSignal lotobigsign(tSignal val);
@@ -150,6 +154,11 @@ typedef struct {
 tPointAccess *wpOffsets;
 tPointAccess *spOffsets;
 #endif // USE_HMI
+// указатели для быстрого доступа к тектовым описаниям проекта
+DESCR_MEM char *fbdCaptionName;
+DESCR_MEM char *fbdCaptionVersion;
+DESCR_MEM char *fbdCaptionBTime;
+//
 #endif // SPEED_OPT
 
 tElemIndex fbdElementsCount;
@@ -177,6 +186,49 @@ ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] =
 ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1};
 //                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3
 //                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+
+#ifdef SPEED_OPT
+// описания "быстрых" вариантов функций
+// --------------------------------------------------------------------------------------------
+#define FBDINPUTOFFSET(index) *(inputOffsets + (index))
+#define FBDGETPARAMETER(element,index) SIGNAL_BYTE_ORDER(fbdParametersBuf[*(parameterOffsets+element)+index])
+#define FBDGETSTORAGE(element,index) fbdStorageBuf[*(storageOffsets+element)+index]
+
+#else // SPEED_OPT
+// описания "медленных" вариантов функций
+// --------------------------------------------------------------------------------------------
+// расчет смещения на первый вход элемента
+#define FBDINPUTOFFSET(index) _fbdInputOffset(index)
+tOffset _fbdInputOffset(tElemIndex index)
+{
+    tElemIndex i = 0;
+    tOffset offset = 0;
+    //
+    while (i < index) offset += FBDdefInputsCount[fbdDescrBuf[i++] & ELEMMASK];
+    return offset;
+}
+// получить значение параметра элемента
+#define FBDGETPARAMETER(element,index) _fbdGetParameter(element,index)
+tSignal _fbdGetParameter(tElemIndex element, unsigned char index)
+{
+    tElemIndex elem = 0;
+    tOffset offset = 0;
+    //
+    while (elem < element) offset += FBDdefParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
+    return SIGNAL_BYTE_ORDER(fbdParametersBuf[offset + index]);
+}
+// получить хранимое значение для элемента
+#define FBDGETSTORAGE(element,index) _fbdGetStorage(element,index)
+tSignal _fbdGetStorage(tElemIndex element, unsigned char index)
+{
+    tElemIndex elem = 0;
+    tOffset offset = 0;
+    //
+    while (elem<element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
+    return fbdStorageBuf[offset + index];
+}
+#endif // SPEED_OPT
+
 
 // -------------------------------------------------------------------------------------------------------
 int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
@@ -284,6 +336,10 @@ void fbdSetMemory(char *buf, bool needReset)
     inputOffsets = (tOffset *)(fbdChangeVarBuf + fbdChangeVarByteCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
     storageOffsets = parameterOffsets + fbdElementsCount;
+    //
+    fbdCaptionName = 0;
+    fbdCaptionVersion = 0;
+    fbdCaptionBTime = 0;
 #ifdef USE_HMI
     // инициализация буферов для быстрого доступа к watch- и set- points
     wpOffsets = (tPointAccess *)(storageOffsets + fbdElementsCount);
@@ -324,7 +380,7 @@ void fbdSetMemory(char *buf, bool needReset)
         // инициализируем их значениями "по умолчанию" из программы
         for(i = 0; i < fbdElementsCount; i++) {
             if(fbdDescrBuf[i] == 16) {
-                fbdSetStorage(i, 0, fbdGetParameter(i, 1));
+                fbdSetStorage(i, 0, FBDGETPARAMETER(i, 1));
             }
         }
     }
@@ -358,7 +414,7 @@ void fbdDoStep(tSignal period)
             case 18:                                                        // SUM
             case 24:                                                        // timer TP
             case 32:                                                        // GEN
-                value = fbdGetStorage(index, 0);
+                value = FBDGETSTORAGE(index, 0);
                 if(value) {
                     value -= period;
                     if(value < 0) value = 0;
@@ -367,7 +423,7 @@ void fbdDoStep(tSignal period)
                 break;
             case 0:                                                         // output PIN
                 fbdCalcElement(index);
-                param = fbdGetParameter(index, 0);
+                param = FBDGETPARAMETER(index, 0);
                 FBDsetProc(0, param, &fbdMemoryBuf[index]);                 // установка значения выходного контакта
                 break;
             case 14:                                                        // output VAR
@@ -388,7 +444,7 @@ void fbdSetNetVar(tNetVar *netvar)
     //
     for(i=0; i < fbdElementsCount; i++) {
         if(fbdDescrBuf[i] == 16) {
-            if(fbdGetParameter(i, 0) == (*netvar).index) {
+            if(FBDGETPARAMETER(i, 0) == (*netvar).index) {
                 fbdSetStorage(i, 0, (*netvar).value);
                 return;
             }
@@ -410,7 +466,7 @@ bool fbdGetNetVar(tNetVar *netvar)
                 // флаг установлен, сбрасываем его
                 fbdChangeVarBuf[varindex>>3] &= ~(1u<<(varindex&7));
                 // номер переменной
-                (*netvar).index = fbdGetParameter(i, 0);
+                (*netvar).index = FBDGETPARAMETER(i, 0);
                 (*netvar).value = fbdMemoryBuf[i];
                 return true;
             }
@@ -457,15 +513,14 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     (*pnt).caption = (*(spOffsets + index)).caption;
 #else
     if(!fbdGetElementIndex(index, 23, &elemIndex)) return false;
-    //
     (*pnt).caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
-    (*pnt).value = fbdGetStorage(elemIndex, 0);
-    (*pnt).lowlimit = fbdGetParameter(elemIndex, 0);
-    (*pnt).upperLimit = fbdGetParameter(elemIndex, 1);
-    (*pnt).defValue = fbdGetParameter(elemIndex, 2);
-    (*pnt).divider = fbdGetParameter(elemIndex, 3);
-    (*pnt).step = fbdGetParameter(elemIndex, 4);
+    (*pnt).value = FBDGETSTORAGE(elemIndex, 0);
+    (*pnt).lowlimit = FBDGETPARAMETER(elemIndex, 0);
+    (*pnt).upperLimit = FBDGETPARAMETER(elemIndex, 1);
+    (*pnt).defValue = FBDGETPARAMETER(elemIndex, 2);
+    (*pnt).divider = FBDGETPARAMETER(elemIndex, 3);
+    (*pnt).step = FBDGETPARAMETER(elemIndex, 4);
     return true;
 }
 // -------------------------------------------------------------------------------------------------------
@@ -495,16 +550,22 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
     (*pnt).caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
     (*pnt).value = fbdMemoryBuf[elemIndex];
-    (*pnt).divider = fbdGetParameter(elemIndex, 0);
+    (*pnt).divider = FBDGETPARAMETER(elemIndex, 0);
     return true;
 }
 // -------------------------------------------------------------------------------------------------------
 // получить структуру с описанием проекта
 void fbdHMIgetDescription(tHMIdescription *pnt)
 {
+#ifdef SPEED_OPT
+    (*pnt).name = fbdCaptionName?fbdCaptionName:(fbdCaptionName = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount));
+    (*pnt).version = fbdCaptionVersion?fbdCaptionVersion:(fbdCaptionVersion = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1));
+    (*pnt).btime = fbdCaptionBTime?fbdCaptionBTime:(fbdCaptionBTime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2));
+#else
     (*pnt).name = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount);
     (*pnt).version = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1);
     (*pnt).btime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2);
+#endif
 }
 // -------------------------------------------------------------------------------------------------------
 // получение значений глобальных настроек схемы
@@ -512,7 +573,15 @@ tSignal fbdGetGlobalOptions(unsigned char option)
 {
     return fbdGlobalOptions[option];
 }
-
+// -------------------------------------------------------------------------------------------------------
+// расчет указателя на текстовое описание элемента по индексу описания
+DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex)
+{
+    tOffset offset = 0;
+    while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
+    return &fbdCaptionsBuf[offset];
+}
+//
 #ifndef SPEED_OPT
 // -------------------------------------------------------------------------------------------------------
 // расчет указателя на текстовое описание элемента по индексу элемента
@@ -532,35 +601,9 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
     }
     return fbdGetCaptionByIndex(captionIndex);
 }
-// -------------------------------------------------------------------------------------------------------
-// расчет указателя на текстовое описание элемента по индексу описания
-DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex)
-{
-    tOffset offset = 0;
-    while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
-    return &fbdCaptionsBuf[offset];
-}
 #endif // SPEED_OPT
 #endif // USE_HMI
-// --------------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------
-// расчет смещения на первый вход элемента
-#ifdef SPEED_OPT
-inline tOffset fbdInputOffset(tElemIndex index)
-#else
-tOffset fbdInputOffset(tElemIndex index)
-#endif // SPEED_OPT
-{
-#ifdef SPEED_OPT
-    return *(inputOffsets + index);
-#else
-    tElemIndex i = 0;
-    tOffset offset = 0;
-    //
-    while (i < index) offset += FBDdefInputsCount[fbdDescrBuf[i++] & ELEMMASK];
-    return offset;
-#endif // SPEED_OPT
-}
+//
 // -------------------------------------------------------------------------------------------------------
 // расчет выходного значения элемента
 void fbdCalcElement(tElemIndex curIndex)
@@ -578,7 +621,7 @@ void fbdCalcElement(tElemIndex curIndex)
     FBDStackPnt = 0;
     curInput = 0;
     //
-    baseInput = fbdInputOffset(curIndex);       //
+    baseInput = FBDINPUTOFFSET(curIndex);       //
     inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
     //
     do {
@@ -597,7 +640,7 @@ void fbdCalcElement(tElemIndex curIndex)
                 // переходим к следующему дочернему элементу
                 curIndex = inpIndex;
                 curInput = 0;
-                baseInput = fbdInputOffset(curIndex);       // элемент сменился, расчет смещения на первый вход элемента
+                baseInput = FBDINPUTOFFSET(curIndex);       // элемент сменился, расчет смещения на первый вход элемента
                 inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
             }
             continue;       // следующая итерация цикла
@@ -628,7 +671,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     }
                     break;
                 case 1:                                                                 // CONST
-                    s1 = fbdGetParameter(curIndex, 0);
+                    s1 = FBDGETPARAMETER(curIndex, 0);
                     break;
                 case 2:                                                                 // NOT
                     s1 = s1?0:1;
@@ -646,14 +689,14 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(s1||s2) {
                         s1 = s1?0:1;
                         fbdSetStorage(curIndex, 0, s1);
-                    } else s1 = fbdGetStorage(curIndex, 0);
+                    } else s1 = FBDGETSTORAGE(curIndex, 0);
                     break;
                 case 7:                                                                 // DTRG
                     // смотрим установку флага фронта на входе "С"
                     if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1])))
                         fbdSetStorage(curIndex, 0, s1);
                     else
-                        s1 = fbdGetStorage(curIndex, 0);
+                        s1 = FBDGETSTORAGE(curIndex, 0);
                     break;
                 case 8:                                                                 // ADD
                     s1 += s2;
@@ -673,7 +716,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     // s1 - D
                     // s2 - T
                     if(s1) {
-                        s1 = (fbdGetStorage(curIndex, 0) == 0);
+                        s1 = (FBDGETSTORAGE(curIndex, 0) == 0);
                     } else {
                         fbdSetStorage(curIndex, 0, s2);
                         s1 = 0;
@@ -683,20 +726,20 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = s1 > s2;
                     break;
                 case 15:
-                    s1 = FBDgetProc(0, fbdGetParameter(curIndex, 0));                   // INPUT PIN
+                    s1 = FBDgetProc(0, FBDGETPARAMETER(curIndex, 0));                   // INPUT PIN
                     break;
                 case 16:
-                    s1 = fbdGetStorage(curIndex, 0);                                    // INPUT VAR
+                    s1 = FBDGETSTORAGE(curIndex, 0);                                    // INPUT VAR
                     break;
                 case 17:                                                                // PID
-                    if(!fbdGetStorage(curIndex, 0)) {           // проверка срабатывания таймера
+                    if(!FBDGETSTORAGE(curIndex, 0)) {           // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s3);         // установка таймера
                         s2 = s1 - s2;                           // ошибка PID
                         // error limit
                         //v = MAX_SIGNAL/2/s4;
                         //if(intAbs(s2) > v) s2 = (s2>0)?v:-v;
                         //
-                        if(!fbdFirstFlag) v = ((tLongSignal)(s1 - fbdGetStorage(curIndex, 1)) * 128)/s3; else v = 0;    // скорость изменения входной величины
+                        if(!fbdFirstFlag) v = ((tLongSignal)(s1 - FBDGETSTORAGE(curIndex, 1)) * 128)/s3; else v = 0;    // скорость изменения входной величины
                         fbdSetStorage(curIndex, 1, s1);                                                                 // сохранение прошлого входного значения
                         if((v < intAbs(s2))||(v > intAbs(s2*3))) {
                             s1= -(tLongSignal)s4*(s2*2 + v) / 128;
@@ -704,7 +747,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     } else s1 = fbdMemoryBuf[curIndex];
                     break;
                 case 18:                                                                // SUM
-                    if(!fbdGetStorage(curIndex, 0)) {       // проверка срабатывания таймера
+                    if(!FBDGETSTORAGE(curIndex, 0)) {       // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s2);     // установка таймера
                         //
                         s1 += fbdMemoryBuf[curIndex];       // сложение с предыдущим значением
@@ -714,7 +757,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 19:                                                                // Counter
                     if(s3) s1 = 0; else {
-                        s1 = fbdGetStorage(curIndex, 0);
+                        s1 = FBDGETSTORAGE(curIndex, 0);
                         if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput]))) s1++;
                         if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1]))) s1--;
                     }
@@ -731,13 +774,13 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 23:                                                                // HMI setpoint
 #ifdef USE_HMI
-                    s1 = fbdGetStorage(curIndex, 0);
+                    s1 = FBDGETSTORAGE(curIndex, 0);
 #endif // USE_HMI
                     break;
                 case 24:                                                                // TIMER TP
                     // s1 - D
                     // s2 - T
-                    if(fbdGetStorage(curIndex, 0)) {
+                    if(FBDGETSTORAGE(curIndex, 0)) {
                         s1 = 1;
                     } else {
                         if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput])) && s2) {
@@ -769,9 +812,9 @@ void fbdCalcElement(tElemIndex curIndex)
                     break;
                 case 32:                                                                // генератор
                     if(s1 > 0) {                                        // s1 - enable, период; s2 - амплитуда
-                        s3 = fbdGetStorage(curIndex, 0);                // s3 - остаток таймера периода
+                        s3 = FBDGETSTORAGE(curIndex, 0);                // s3 - остаток таймера периода
                         if(s3) {
-                            switch (fbdGetParameter(curIndex, 0)) {     // тип генератора
+                            switch (FBDGETPARAMETER(curIndex, 0)) {     // тип генератора
                                 case 0:                                 // меандр
                                     s1 = (s3 > (s1>>1))?0:s2;
                                     break;
@@ -822,47 +865,19 @@ void fbdCalcElement(tElemIndex curIndex)
         if(FBDStackPnt--) {
             curIndex = FBDStack[FBDStackPnt].index;         // восстанавливаем родительский элемент
             curInput = FBDStack[FBDStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
-            baseInput = fbdInputOffset(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
+            baseInput = FBDINPUTOFFSET(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
             inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
         } else break;                                       // стек пуст, вычисления завершены
     } while(1);
 }
 // -------------------------------------------------------------------------------------------------------
-// get value of element parameter
-tSignal fbdGetParameter(tElemIndex element, unsigned char index)
-{
-#ifdef SPEED_OPT
-    return SIGNAL_BYTE_ORDER(fbdParametersBuf[*(parameterOffsets + element) + index]);
-#else
-    tElemIndex elem = 0;
-    tOffset offset = 0;
-    //
-    while (elem < element) offset += FBDdefParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
-    return SIGNAL_BYTE_ORDER(fbdParametersBuf[offset + index]);
-#endif // SPEED_OPT
-}
-// -------------------------------------------------------------------------------------------------------
-// get value of element memory
-tSignal fbdGetStorage(tElemIndex element, unsigned char index)
-{
-#ifdef SPEED_OPT
-    return fbdStorageBuf[*(storageOffsets + element) + index];
-#else
-    tElemIndex elem = 0;
-    tOffset offset = 0;
-    //
-    while (elem<element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
-    return fbdStorageBuf[offset + index];
-#endif // SPEED_OPT
-}
-// -------------------------------------------------------------------------------------------------------
-// save element memory
+// сохранить память элемента
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
-    tOffset offset = 0;
 #ifdef SPEED_OPT
-    offset = *(storageOffsets + element) + index;
+    tOffset offset = *(storageOffsets + element) + index;
 #else
+    tOffset offset = 0;
     tElemIndex elem = 0;
     //
     while (elem < element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
@@ -870,7 +885,7 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 #endif // SPEED_OPT
     if(fbdStorageBuf[offset] != value){
         fbdStorageBuf[offset] = value;
-        FBDsetProc(1, offset, &fbdStorageBuf[offset]);      // save to nvram
+        FBDsetProc(1, offset, &fbdStorageBuf[offset]);
     }
 }
 // -------------------------------------------------------------------------------------------------------
@@ -910,7 +925,7 @@ void setChangeVarFlag(tElemIndex index)
 }
 // -------------------------------------------------------------------------------------------------------
 // расчет абсолютного значения сигнала
-tSignal intAbs(tSignal val)
+inline tSignal intAbs(tSignal val)
 {
     return (val>=0)?val:-val;
 }
