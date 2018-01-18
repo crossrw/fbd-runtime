@@ -51,7 +51,7 @@ tElemIndex lotobigidx(tElemIndex val);
 #endif // defined
 
 // элемент стека вычислений
-typedef struct {
+typedef struct fbdstackitem_t {
     tElemIndex index;               // индекс элемента
     unsigned char input;            // номер входа
 } tFBDStackItem;
@@ -146,7 +146,7 @@ tOffset *storageOffsets;
 
 #ifdef USE_HMI
 // Структура для быстрого доступа к текстовым описаниям
-typedef struct {
+typedef struct pointaccess_t {
     tElemIndex index;                           // point element index
     DESCR_MEM char DESCR_MEM_SUFX *caption;     // указатель на текстовую строку
 } tPointAccess;
@@ -300,7 +300,7 @@ void fbdSetMemory(char *buf, bool needReset)
 {
     tElemIndex i;
 #ifdef USE_HMI
-    tHMIdata HMIdata;
+    tHMIdata hmiData;
 #endif // USE_HMI
 #ifdef SPEED_OPT
     tOffset curInputOffset = 0;
@@ -387,9 +387,9 @@ void fbdSetMemory(char *buf, bool needReset)
 #ifdef USE_HMI
     // инициализация значений точек регулирования (HMI setpoints)
     i = 0;
-    while(fbdHMIgetSP(i, &HMIdata)) {
+    while(fbdHMIgetSP(i, &hmiData)) {
         // если значение точки регулирования не корректное, то устанавливаем значение по умолчанию
-        if(needReset||(HMIdata.value > HMIdata.upperLimit)||(HMIdata.value < HMIdata.lowlimit)) fbdHMIsetSP(i, HMIdata.defValue);
+        if(needReset||(hmiData.value > hmiData.upperLimit)||(hmiData.value < hmiData.lowlimit)) fbdHMIsetSP(i, hmiData.defValue);
         i++;
     }
 #endif // USE_HMI
@@ -608,8 +608,8 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
 // расчет выходного значения элемента
 void fbdCalcElement(tElemIndex curIndex)
 {
-    tFBDStackItem FBDStack[FBDSTACKSIZE];       // стек вычислений
-    tFBDStackPnt FBDStackPnt;                   // указатель стека
+    tFBDStackItem fbdStack[FBDSTACKSIZE];       // стек вычислений
+    tFBDStackPnt fbdStackPnt;                   // указатель стека
     unsigned char curInput;                     // текущий входной контакт элемента
     unsigned char inputCount;                   // число входов текущего элемента
     tOffset baseInput;                          //
@@ -618,7 +618,7 @@ void fbdCalcElement(tElemIndex curIndex)
     //
     if(getCalcFlag(curIndex)) return;           // элемент уже рассчитан?
     //
-    FBDStackPnt = 0;
+    fbdStackPnt = 0;
     curInput = 0;
     //
     baseInput = FBDINPUTOFFSET(curIndex);       //
@@ -635,8 +635,8 @@ void fbdCalcElement(tElemIndex curIndex)
                 // это нужно в случае, если в схеме есть обратные связи
                 setCalcFlag(curIndex);
                 // вход еще не рассчитан, запихиваем текущий элемент и номер входа в стек
-                FBDStack[FBDStackPnt].index = curIndex;
-                FBDStack[FBDStackPnt++].input = curInput;
+                fbdStack[fbdStackPnt].index = curIndex;
+                fbdStack[fbdStackPnt++].input = curInput;
                 // переходим к следующему дочернему элементу
                 curIndex = inpIndex;
                 curInput = 0;
@@ -862,9 +862,9 @@ void fbdCalcElement(tElemIndex curIndex)
             fbdMemoryBuf[curIndex] = s1;                            // сохраняем результат в буфер
         }
         // текущий элемент вычислен, пробуем достать из стека родительский элемент
-        if(FBDStackPnt--) {
-            curIndex = FBDStack[FBDStackPnt].index;         // восстанавливаем родительский элемент
-            curInput = FBDStack[FBDStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
+        if(fbdStackPnt--) {
+            curIndex = fbdStack[fbdStackPnt].index;         // восстанавливаем родительский элемент
+            curInput = fbdStack[fbdStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
             baseInput = FBDINPUTOFFSET(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
             inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
         } else break;                                       // стек пуст, вычисления завершены

@@ -136,7 +136,7 @@ void fbdDoStep(tSignal period);
 // -------------------------------------------------------------------------------------------------------
 //
 // структура описания сетевой переменной
-typedef struct {
+typedef struct netvar_t {
     tSignal index;              // номер сетевой переменной
     tSignal value;              // значение сетевой переменной
 } tNetVar;
@@ -169,7 +169,7 @@ tSignal fbdGetGlobalOptions(unsigned char option);
 // HMI
 // -------------------------------------------------------------------------------------------------------
 // структура описания точки контроля или регулирования
-typedef struct {
+typedef struct hmidata_t {
     tSignal value;              // текущее значение точки
     tSignal lowlimit;           // нижний предел значения (только для точек регулирования)
     tSignal upperLimit;         // верхний предел значения (только для точек регулирования)
@@ -189,7 +189,7 @@ void fbdHMIsetSP(tSignal index, tSignal value);
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt);
 //
 // структура описания проекта
-typedef struct {
+typedef struct hmidescription_t {
     DESCR_MEM char *name;       // наименование проекта
     DESCR_MEM char *version;    // версия проекта
     DESCR_MEM char *btime;      // дата и время компиляции
