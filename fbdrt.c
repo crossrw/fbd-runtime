@@ -42,7 +42,7 @@ extern void FBDsetProc(char type, tSignal index, tSignal *value);
 // рисование залитого прямоугольника
 extern void FBDdrawRectangle(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tColor color);
 // рисование текста
-extern void FBDdrawText(tScreenDim x1, tScreenDim y1, unsigned char font, tColor color, tColor bkcolor, bool trans, char *text);
+extern void FBDdrawText(tScreenDim x1, tScreenDim y1, unsigned char font, tColor color, tColor bkcolor, bool transparent, char *text);
 // рисование линии
 extern void FBDdrawLine(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tScreenDim width, tColor color);
 // рисование залитого эллипса

@@ -81,7 +81,7 @@ void FBDdrawRectangle(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2
     printf("draw rectangle: x1:%d y1:%d x2:%d y2:%d color:%d\n", x1, y1, x2, y2, color);
 }
 // рисование текста
-void FBDdrawText(tScreenDim x1, tScreenDim y1, unsigned char font, tColor color, tColor bkcolor, bool trans, char *text)
+void FBDdrawText(tScreenDim x1, tScreenDim y1, unsigned char font, tColor color, tColor bkcolor, bool transparent, char *text)
 {
     printf("draw text: x1:%d y1:%d font:%d color:%d bkcolor:%d text:'%s'\n", x1, y1, font, color, bkcolor, text);
 }
