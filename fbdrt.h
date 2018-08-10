@@ -3,7 +3,21 @@
 
 #include <stdbool.h>       // For true/false definition
 
-#define FBD_LIB_VERSION 7
+// 7 - базовая
+// 8 - поддержка экранов
+#define FBD_LIB_VERSION 8
+
+// 
+#if defined ( __CC_ARM   )
+  #define __packed        __packed                     /*!< packing keyword for ARM Compiler */
+#elif defined ( __ICCARM__ )
+  #define __packed        __packed                     /*!< packing keyword for IAR Compiler */
+#elif defined   (  __GNUC__  )
+  #define __packed        __attribute__ ((__packed__)) /*!< packing keyword for GNU Compiler */
+#elif defined   (  __TASKING__  )                      /*!< packing keyword for TASKING Compiler */
+  #define __packed
+#endif
+
 //
 //
 // =========================================================================
@@ -125,11 +139,118 @@ int fbdInit(DESCR_MEM unsigned char *descr);
 void fbdSetMemory(char *buf, bool needReset);
 //
 // -------------------------------------------------------------------------------------------------------
-// Calculating function
+// Функция вычисления
 // -------------------------------------------------------------------------------------------------------
 // Функция выполняет один шаг вычисления схемы
 //  period - время с момента предыдущего вызова fbdDoStep(), например в милисекундах
 void fbdDoStep(tSignal period);
+
+
+// -------------------------------------------------------------------------------------------------------
+// Экраны
+// -------------------------------------------------------------------------------------------------------
+#ifdef USE_HMI
+
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 240
+
+typedef unsigned short tScreenDim;
+typedef unsigned short tColor;
+
+// описание структуры экрана
+typedef struct __packed Screen_t {
+    unsigned short len;                                         // размер экрана                    2
+    tColor bkcolor;                                             // цвет фона                        2
+    unsigned short period;                                      // период обновления                2
+    unsigned short elemCount;                                   // количество элементов экрана      2
+    // тут элементы экрана
+} tScreen;
+
+// описание элементов экрана
+// базовый элемент с видимостью
+typedef struct __packed ScrElemBase_t {
+    unsigned short len;                                         // размер структуры                 2
+    unsigned short type;                                        // тип элемента                     2
+    //
+    unsigned short visibleCond;                                 // условие видимости                2
+    tElemIndex visibleElem;                                     // индекс элемента                  2
+    tSignal visibleValue;                                       // константа - значение сигнала     4
+    //
+    tScreenDim x1;                                              // координата x                     2
+    tScreenDim y1;                                              // координата y                     2
+} tScrElemBase;
+
+// элемент прямоугольник
+typedef struct __packed ScrElemRect_t {
+    tScrElemBase parent;                                        //                                  16
+    //
+    tScreenDim x2;                                              // координата x2                    2
+    tScreenDim y2;                                              // координата y2                    2
+    tColor color;                                               // цвет                             2
+    unsigned short reserve;                                     //                                  2
+} tScrElemRect;
+
+// элемент эллипс
+typedef struct __packed ScrElemCircle_t {
+    tScrElemBase parent;                                        //                                  16
+    //
+    tScreenDim x2;                                              // координата x2                    2
+    tScreenDim y2;                                              // координата y2                    2
+    tColor color;                                               // цвет                             2
+    unsigned short reserve;                                     //                                  2
+} tScrElemCircle;
+
+// элемент линия
+typedef struct __packed ScrElemLine_t {
+    tScrElemBase parent;                                        //                                  16
+    //
+    tScreenDim x2;                                              // координата x2                    2
+    tScreenDim y2;                                              // координата y2                    2
+    tColor color;                                               // цвет                             2
+    tScreenDim width;                                           // толщина линии                    2
+} tScrElemLine;
+
+// элемент картинка
+typedef struct __packed ScrElemImage_t {
+    tScrElemBase parent;
+    //
+    unsigned short index;                                       // индекс картинки
+} tScrElemImage;
+
+// элемент текст
+typedef struct __packed ScrElemText_t {
+    tScrElemBase parent;                                        //                                  16
+    //
+    tColor color;                                               // цвет                             2
+    tColor bkcolor;                                             // цвет фона                        2
+    //
+    tElemIndex valueElem;                                       // индекс элемента                  2
+    unsigned char font;                                         // индекс шрифта, старший бит прозрачность 1
+    unsigned char divider;                                      // делитель                         1
+    char text;                                                  // сам текст, заканчивается 0       длинна должны быть кратна 4 !
+} tScrElemText;
+
+// элемент шкала
+typedef struct __packed ScrElemGauge_t {
+    tScrElemBase parent;                                        //                                  16
+    //
+    tScreenDim x2;                                              // координата x2                    2
+    tScreenDim y2;                                              // координата y2                    2
+    //
+    tColor color;                                               // цвет                             2
+    tColor bkcolor;                                             // цвет фона                        2
+    //
+    tSignal maxvalue;                                           // максимальное значение шкалы      4
+    tElemIndex valueElem;                                       // индекс элемента                  2
+    unsigned short orientation;                                 // ориентация: 0 - гор, 1 - вер     2
+} tScrElemGauge;
+
+
+// один шаг вычисления схемы с последующим рисованием (при необходимости) экрана screen
+// если screen < 0, то не рисовать экран
+void fbdDoStepEx(tSignal period, short screenIndex);
+
+#endif
 
 // -------------------------------------------------------------------------------------------------------
 // Сетевые переменные
@@ -163,7 +284,17 @@ void fbdChangeAllNetVars(void);
 #define FBD_OPT_NETVAR_USE   1
 #define FBD_OPT_NETVAR_PORT  2
 #define FBD_OPT_NETVAR_GROUP 3
-tSignal fbdGetGlobalOptions(unsigned char option);
+#define FBD_OPT_SCREEN_COUNT 4
+
+extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
+extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
+
+#define FBD_REQ_VERSION  fbdGlobalOptions[FBD_OPT_REQ_VERSION]
+#define FBD_NETVAR_USE   fbdGlobalOptions[FBD_OPT_NETVAR_USE]
+#define FBD_NETVAR_PORT  fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
+#define FBD_NETVAR_GROUP fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
+#define FBD_SCREEN_COUNT ((*fbdGlobalOptionsCount>4)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
+
 //
 #ifdef USE_HMI
 // HMI

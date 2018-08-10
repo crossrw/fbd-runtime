@@ -72,9 +72,48 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
 #endif
 }
 
+#ifdef USE_HMI
+// рисование графических примитивов
+//
+// рисование залитого прямоугольника
+void FBDdrawRectangle(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tColor color)
+{
+    printf("draw rectangle: x1:%d y1:%d x2:%d y2:%d color:%d\n", x1, y1, x2, y2, color);
+}
+// рисование текста
+void FBDdrawText(tScreenDim x1, tScreenDim y1, unsigned char font, tColor color, tColor bkcolor, bool trans, char *text)
+{
+    printf("draw text: x1:%d y1:%d font:%d color:%d bkcolor:%d text:'%s'\n", x1, y1, font, color, bkcolor, text);
+}
+// рисование линии
+void FBDdrawLine(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tScreenDim width, tColor color)
+{
+    printf("draw line: x1:%d y1:%d x2:%d y2:%d width:%d color:%d\n", x1, y1, x2, y2, width, color);
+}
+// рисование залитого эллипса
+void FBDdrawEllipse(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tColor color)
+{
+    printf("draw ellipse: x1:%d y1:%d x2:%d y2:%d color:%d\n", x1, y1, x2, y2, color);
+}
+// рисование картинки
+void FBDdrawImage(tScreenDim x1, tScreenDim y1, tScreenDim image)
+{
+    printf("draw image: x1:%d y1:%d index:%d\n", x1, y1, image);
+}
+// завершение рисования экрана (копирование видеообласти)
+void FBDdrawEnd(void)
+{
+    printf("draw end -------------------------------------\n");
+}
+
+#endif
+
+
 int main(void)
 {
+
     int res,i;
+
     // DWORD start, end;
     //
     res = fbdInit(description);
@@ -90,10 +129,11 @@ int main(void)
     fbdSetMemory(memory, true);
     printf("memory request size = %d\n", res);
     //
-    printf("FBD_OPT_REQ_VERSION: %ld\n", fbdGetGlobalOptions(FBD_OPT_REQ_VERSION));
-    printf("FBD_NETVAR_USE: %ld\n", fbdGetGlobalOptions(FBD_OPT_NETVAR_USE));
-    printf("FBD_NETVAR_PORT: %ld\n", fbdGetGlobalOptions(FBD_OPT_NETVAR_PORT));
-    printf("FBD_NETVAR_GROUP: %ld\n", fbdGetGlobalOptions(FBD_OPT_NETVAR_GROUP));
+    printf("FBD_OPT_REQ_VERSION: %ld\n",    FBD_REQ_VERSION);
+    printf("FBD_NETVAR_USE: %ld\n",         FBD_NETVAR_USE);
+    printf("FBD_NETVAR_PORT: %ld\n",        FBD_NETVAR_PORT);
+    printf("FBD_NETVAR_GROUP: %ld\n",       FBD_NETVAR_GROUP);
+    printf("FBD_SCREEN_COUNT: %ld\n",       FBD_SCREEN_COUNT);
 
     // main loop
     // start = GetTickCount();
@@ -114,7 +154,7 @@ int main(void)
         // netvar.value = i-1;
         // fbdSetNetVar(&netvar);
 
-        fbdDoStep(1000);
+        fbdDoStepEx(1000, 0);
         msleep(1000);
         
 
