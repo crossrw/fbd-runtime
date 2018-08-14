@@ -16,6 +16,9 @@
 // 12-01-2018
 // * починил SPEED_OPT
 
+// 14-08-2018
+// + добавлены экраны интерфейса для контроллера
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
@@ -315,7 +318,8 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         // первый экран идет после текстовых описаний в количестве (fbdWpCount + fbdSpCount), причем его начало выровнено на 4 байта
         curCap = fbdCaptionsBuf;
         // перебираем все строки текстовых описаний
-        for(i=0; i < (fbdWpCount + fbdSpCount); i++) {
+        // 3 - это имя проекта, версия проекта, дата создания проекта
+        for(i=0; i < (fbdWpCount + fbdSpCount + 3); i++) {
             while(*(curCap++));
         }
         // выравнивание curCap по границе 32 бита
@@ -498,16 +502,16 @@ void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
                     FBDdrawRectangle(elem->x1, elem->y1, ((tScrElemRect *)elem)->x2, ((tScrElemRect *)elem)->y2, ((tScrElemRect *)elem)->color);
                     break;
                 case 2:                             // текст
-                    f = getElementOutputValue(((tScrElemText *)elem)->valueElem) * 1.0;
+                    f = getElementOutputValue(((tScrElemText *)elem)->valueElem) * (float)1.0;
                     switch (((tScrElemText *)elem)->divider) {
                         case 1:
-                            f = f / 10.0;
+                            f = f / (float)10.0;
                             break;
                         case 2:
-                            f = f / 100.0;
+                            f = f / (float)100.0;
                             break;
                         case 3:
-                            f = f / 1000.0;
+                            f = f / (float)1000.0;
                     }
                     snprintf(text, sizeof(text), &((tScrElemText *)elem)->text, f);
                     FBDdrawText(elem->x1, elem->y1, ((tScrElemText *)elem)->font & 0x7f, ((tScrElemText *)elem)->color, ((tScrElemText *)elem)->bkcolor, (((tScrElemText *)elem)->font & 0x80) != 0, text);
@@ -568,6 +572,7 @@ void fbdDoStepEx(tSignal period, short screenIndex)
         return;
     }
     // расчет указателя на экран
+    i = 0;
     screen = fbdScreensBuf;
     while (i < screenIndex) {
         screen = (tScreen *)((char *)screen + screen->len);

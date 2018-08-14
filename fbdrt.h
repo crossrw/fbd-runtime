@@ -9,13 +9,11 @@
 
 // 
 #if defined ( __CC_ARM   )
-  #define __packed        __packed                     /*!< packing keyword for ARM Compiler */
-#elif defined ( __ICCARM__ )
-  #define __packed        __packed                     /*!< packing keyword for IAR Compiler */
+  #define __packed_struct           __packed struct
 #elif defined   (  __GNUC__  )
-  #define __packed        __attribute__ ((__packed__)) /*!< packing keyword for GNU Compiler */
-#elif defined   (  __TASKING__  )                      /*!< packing keyword for TASKING Compiler */
-  #define __packed
+  #define __packed_struct           struct __attribute__ ((__packed__))
+#elif defined   (  __TASKING__  )
+  #define __packed_struct           struct __packed
 #endif
 
 //
@@ -158,7 +156,7 @@ typedef unsigned short tScreenDim;
 typedef unsigned short tColor;
 
 // описание структуры экрана
-typedef struct __packed Screen_t {
+typedef __packed_struct Screen_t {
     unsigned short len;                                         // размер экрана                    2
     tColor bkcolor;                                             // цвет фона                        2
     unsigned short period;                                      // период обновления                2
@@ -168,7 +166,7 @@ typedef struct __packed Screen_t {
 
 // описание элементов экрана
 // базовый элемент с видимостью
-typedef struct __packed ScrElemBase_t {
+typedef __packed_struct ScrElemBase_t {
     unsigned short len;                                         // размер структуры                 2
     unsigned short type;                                        // тип элемента                     2
     //
@@ -181,7 +179,7 @@ typedef struct __packed ScrElemBase_t {
 } tScrElemBase;
 
 // элемент прямоугольник
-typedef struct __packed ScrElemRect_t {
+typedef __packed_struct ScrElemRect_t {
     tScrElemBase parent;                                        //                                  16
     //
     tScreenDim x2;                                              // координата x2                    2
@@ -191,7 +189,7 @@ typedef struct __packed ScrElemRect_t {
 } tScrElemRect;
 
 // элемент эллипс
-typedef struct __packed ScrElemCircle_t {
+typedef __packed_struct ScrElemCircle_t {
     tScrElemBase parent;                                        //                                  16
     //
     tScreenDim x2;                                              // координата x2                    2
@@ -201,7 +199,7 @@ typedef struct __packed ScrElemCircle_t {
 } tScrElemCircle;
 
 // элемент линия
-typedef struct __packed ScrElemLine_t {
+typedef __packed_struct ScrElemLine_t {
     tScrElemBase parent;                                        //                                  16
     //
     tScreenDim x2;                                              // координата x2                    2
@@ -211,14 +209,14 @@ typedef struct __packed ScrElemLine_t {
 } tScrElemLine;
 
 // элемент картинка
-typedef struct __packed ScrElemImage_t {
+typedef __packed_struct ScrElemImage_t {
     tScrElemBase parent;
     //
     unsigned short index;                                       // индекс картинки
 } tScrElemImage;
 
 // элемент текст
-typedef struct __packed ScrElemText_t {
+typedef __packed_struct ScrElemText_t {
     tScrElemBase parent;                                        //                                  16
     //
     tColor color;                                               // цвет                             2
@@ -231,7 +229,7 @@ typedef struct __packed ScrElemText_t {
 } tScrElemText;
 
 // элемент шкала
-typedef struct __packed ScrElemGauge_t {
+typedef __packed_struct ScrElemGauge_t {
     tScrElemBase parent;                                        //                                  16
     //
     tScreenDim x2;                                              // координата x2                    2
