@@ -7,7 +7,7 @@
 // 8 - поддержка экранов
 #define FBD_LIB_VERSION 8
 
-// 
+// описание упакованной структуры
 #if defined ( __CC_ARM   )
   #define __packed_struct           __packed struct
 #elif defined   (  __GNUC__  )
@@ -225,7 +225,7 @@ typedef __packed_struct ScrElemText_t {
     tElemIndex valueElem;                                       // индекс элемента                  2
     unsigned char font;                                         // индекс шрифта, старший бит прозрачность 1
     unsigned char divider;                                      // делитель                         1
-    char text;                                                  // сам текст, заканчивается 0       длинна должны быть кратна 4 !
+    char text[];                                                // сам текст, заканчивается 0       длинна должны быть кратна 4 !
 } tScrElemText;
 
 // элемент шкала
@@ -247,6 +247,13 @@ typedef __packed_struct ScrElemGauge_t {
 // один шаг вычисления схемы с последующим рисованием (при необходимости) экрана screen
 // если screen < 0, то не рисовать экран
 void fbdDoStepEx(tSignal period, short screenIndex);
+
+#define GP_RTC_HOUR     20
+#define GP_RTC_MINUTE   21
+#define GP_RTC_SECOND   22
+#define GP_RTC_DAY      23
+#define GP_RTC_MONTH    24
+#define GP_RTC_YEAR     25
 
 #endif
 
