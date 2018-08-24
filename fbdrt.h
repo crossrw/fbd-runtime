@@ -206,13 +206,16 @@ typedef __packed_struct ScrElemLine_t {
     tScreenDim y2;                                              // координата y2                    2
     tColor color;                                               // цвет                             2
     tScreenDim width;                                           // толщина линии                    2
+    float sine;                                                 //                                  4
+    float cosinus;                                              //                                  4
 } tScrElemLine;
 
 // элемент картинка
 typedef __packed_struct ScrElemImage_t {
-    tScrElemBase parent;
+    tScrElemBase parent;                                        //                                  16
     //
-    unsigned short index;                                       // индекс картинки
+    unsigned short index;                                       // индекс картинки                  2
+    unsigned short reserve;                                     //                                  2 !!!
 } tScrElemImage;
 
 // элемент текст

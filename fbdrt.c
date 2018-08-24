@@ -47,7 +47,7 @@ extern void FBDdrawRectangle(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScree
 // рисование текста
 extern void FBDdrawText(tScreenDim x1, tScreenDim y1, unsigned char font, tColor color, tColor bkcolor, bool transparent, char *text);
 // рисование линии
-extern void FBDdrawLine(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tScreenDim width, tColor color);
+extern void FBDdrawLine(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tColor color);
 // рисование залитого эллипса
 extern void FBDdrawEllipse(tScreenDim x1, tScreenDim y1, tScreenDim x2, tScreenDim y2, tColor color);
 // рисование картинки
@@ -312,6 +312,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
 #ifdef USE_HMI
     // указатель на начало текстовых строк точек контроля и регулирования
     fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
+    // после текстовых строк точек контроля и регулирования идут еще 3 строки: имя проекта, версия проекта, дата создания проекта
 
     // расчет указателя на первый экран
     if(FBD_SCREEN_COUNT > 0) {
@@ -477,6 +478,24 @@ tSignal getElementOutputValue(tElemIndex index)
     return fbdMemoryBuf[index];
 }
 
+void sprintf2d(char *buf, tSignal val)
+{
+    *(buf + 1) = val % 10 + '0';
+    val /= 10;
+    *(buf) = val % 10 + '0';
+}
+
+void sprintf4d(char *buf, tSignal val)
+{
+    *(buf + 3) = val % 10 + '0';
+    val /= 10;
+    *(buf + 2) = val % 10 + '0';
+    val /= 10;
+    *(buf + 1) = val % 10 + '0';
+    val /= 10;
+    *(buf) = val % 10 + '0';
+}
+
 void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
 {
     tScrElemBase *elem;
@@ -498,7 +517,15 @@ void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
             // рисование
             switch(elem->type) {
                 case 0:                             // линия
-                    FBDdrawLine(elem->x1, elem->y1, ((tScrElemLine *)elem)->x2, ((tScrElemLine *)elem)->y2, ((tScrElemLine *)elem)->width, ((tScrElemLine *)elem)->color);
+                    k = ((tScrElemLine *)elem)->width;
+                    if(k > 1) {
+                        k--;
+                        for(j=-k/2; j<=k/2 + k%2; j++) {
+                            FBDdrawLine(roundf(elem->x1-j*((tScrElemLine *)elem)->sine), roundf(elem->y1+j*((tScrElemLine *)elem)->cosinus), roundf(((tScrElemLine *)elem)->x2-j*((tScrElemLine *)elem)->sine), roundf(((tScrElemLine *)elem)->y2+j*((tScrElemLine *)elem)->cosinus), ((tScrElemLine *)elem)->color);
+                        }
+                    } else {
+                        FBDdrawLine(elem->x1, elem->y1, ((tScrElemLine *)elem)->x2, ((tScrElemLine *)elem)->y2, ((tScrElemLine *)elem)->color);
+                    }
                     break;
                 case 1:                             // прямоугольник
                     FBDdrawRectangle(elem->x1, elem->y1, ((tScrElemRect *)elem)->x2, ((tScrElemRect *)elem)->y2, ((tScrElemRect *)elem)->color);
@@ -525,49 +552,49 @@ void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
                             switch(nc) {
                                 case 'd':
                                     if(k < (sizeof(dttext)-2))  {
-                                        snprintf(&dttext[k], 3, "%.2ld", FBDgetProc(0, GP_RTC_DAY));
+                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_DAY));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'm':
                                     if(k < (sizeof(dttext)-2)) {
-                                        snprintf(&dttext[k], 3, "%.2ld", FBDgetProc(0, GP_RTC_MONTH));
+                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_MONTH));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'y':
                                     if(k < (sizeof(dttext)-2)) {
-                                        snprintf(&dttext[k], 3, "%.2ld", FBDgetProc(0, GP_RTC_YEAR)-2000);
+                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_YEAR)-2000);
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'h':
                                     if(k < (sizeof(dttext)-2)) {
-                                        snprintf(&dttext[k], 3, "%.2ld", FBDgetProc(0, GP_RTC_HOUR));
+                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_HOUR));
                                         k += 2;
                                     }
                                     j++;
                                     break;                                
                                 case 'n':
                                     if(k < (sizeof(dttext)-2)) {
-                                        snprintf(&dttext[k], 3, "%.2ld", FBDgetProc(0, GP_RTC_MINUTE));
+                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_MINUTE));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 's':
                                     if(k < (sizeof(dttext)-2)) {
-                                        snprintf(&dttext[k], 3, "%.2ld", FBDgetProc(0, GP_RTC_SECOND));
+                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_SECOND));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'Y':
                                     if(k < (sizeof(dttext)-4)) {
-                                        snprintf(&dttext[k], 5, "%.4ld", FBDgetProc(0, GP_RTC_YEAR));
+                                        sprintf4d(&dttext[k], FBDgetProc(0, GP_RTC_YEAR));
                                         k += 4;
                                     }
                                     j++;
