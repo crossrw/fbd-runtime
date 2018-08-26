@@ -976,19 +976,13 @@ void fbdHMISetSP(tSignal index, tSignal value);
 // value - new value of setpoint
 ```
 
-## Current status
+## Текущий статус
 
-It's works. Now the library is used in the finished projects and does not contain know the problems. Plans for fbdrt development:
+Это работает. Библиотека используется в некоторых "боевых" проектах и не содержит известных автору проблем. Дальнейшие планы:
 
-* speed optimization
+* оптимизация скорости выполнения
+* доработка документации
 
-Plans for editor development:
+## Автор
 
-* interface translation in other languages (only Russian now)
-* write documentation
-* ability to add markup (comments, etc.)
-* add the ability to create user libraries
-
-## Author
-
-Alexey Lutovinin -- crossrw1@gmail.com
+Алексей Лутовинин -- crossrw1@gmail.com
