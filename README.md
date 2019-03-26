@@ -15,7 +15,9 @@ FBD - один из языков программирования описанн
 
 Редактор и симулятор выполнения программ FBD вы можете скачать по [ссылке](https://www.mnppsaturn.ru/fbd2/fbd2setup.exe).
 
-Доступно небольшое [видео](http://youtu.be/KEGXHd6FIEI) об использовании редактора схем.
+На YoTube создан [плейлист](https://www.youtube.com/playlist?list=PL-NR9fQZQS9kNCQq-ceBZPDU_Iv5p9PwC), посвященный контроллеру САТ-500, использующем бибилиотеку.
+
+Библиотека использована при разработке универсального контроллера САТ-500, подробная информация о контроллере на доступна на сайте [www.sat500.ru](https://www.sat500.ru).
 
 ## Оглавление
 
@@ -979,19 +981,13 @@ void fbdHMISetSP(tSignal index, tSignal value);
 // value - new value of setpoint
 ```
 
-## Current status
+## Текущий статус
 
-It's works. Now the library is used in the finished projects and does not contain know the problems. Plans for fbdrt development:
+Это работает. Библиотека используется в некоторых "боевых" проектах и не содержит известных автору проблем. Дальнейшие планы:
 
-* speed optimization
+* оптимизация скорости выполнения
+* доработка документации
 
-Plans for editor development:
+## Автор
 
-* interface translation in other languages (only Russian now)
-* write documentation
-* ability to add markup (comments, etc.)
-* add the ability to create user libraries
-
-## Author
-
-Alexey Lutovinin -- crossrw1@gmail.com
+Алексей Лутовинин -- crossrw1@gmail.com
