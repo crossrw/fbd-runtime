@@ -127,6 +127,7 @@ typedef unsigned short tElemIndex;
 // -1 - неверный код элемента в описании схемы
 // -2 - неверный размер tSignal или tElementIndex
 // -3 - несовпадает версия программы и библиотеки
+// -4 - неверная контрольная сумма программы
 int fbdInit(DESCR_MEM unsigned char *descr);
 //
 //
@@ -293,6 +294,7 @@ void fbdChangeAllNetVars(void);
 #define FBD_OPT_NETVAR_PORT  2
 #define FBD_OPT_NETVAR_GROUP 3
 #define FBD_OPT_SCREEN_COUNT 4
+#define FBD_OPT_SCHEMA_CRC16 5
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
 extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
@@ -301,7 +303,8 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_NETVAR_USE   fbdGlobalOptions[FBD_OPT_NETVAR_USE]
 #define FBD_NETVAR_PORT  fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
 #define FBD_NETVAR_GROUP fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
-#define FBD_SCREEN_COUNT ((*fbdGlobalOptionsCount>4)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
+#define FBD_SCREEN_COUNT ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
+#define FBD_SCHEMA_CRC16 ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_CRC16)?fbdGlobalOptions[FBD_OPT_SCHEMA_CRC16]:-1)
 
 //
 #ifdef USE_HMI

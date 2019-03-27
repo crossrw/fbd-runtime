@@ -166,6 +166,7 @@ int main(void)
     printf("FBD_NETVAR_PORT: %ld\n",        FBD_NETVAR_PORT);
     printf("FBD_NETVAR_GROUP: %ld\n",       FBD_NETVAR_GROUP);
     printf("FBD_SCREEN_COUNT: %ld\n",       FBD_SCREEN_COUNT);
+    printf("FBD_SCHEMA_CRC16: %ld\n",       FBD_SCHEMA_CRC16);
 
     // main loop
     // start = GetTickCount();
