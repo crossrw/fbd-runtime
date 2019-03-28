@@ -1210,13 +1210,13 @@ void setRiseFlag(tElemIndex element)
 // получение флага "Элемент вычислен"
 char getCalcFlag(tElemIndex element)
 {
-   return fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1))?1:0;
+   return (fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1)))?1:0;
 }
 // -------------------------------------------------------------------------------------------------------
 // получение флага "rising flag"
 char getRiseFlag(tElemIndex element)
 {
-    return fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1))?1:0;
+    return (fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1)))?1:0;
 }
 // -------------------------------------------------------------------------------------------------------
 // установка флага изменения переменной
