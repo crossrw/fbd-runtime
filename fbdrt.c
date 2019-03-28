@@ -263,20 +263,16 @@ tSignal _fbdGetStorage(tElemIndex element, unsigned char index)
 }
 #endif // SPEED_OPT
 
-// расчет CRC16, используется при проверке корректности программы
-unsigned short fbdCRC(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf, int len)
+// расчет CRC32, используется при проверке корректности программы
+unsigned long int fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int size)
 {
-    int i, j;
-    unsigned short crc = 0xffff;
+    unsigned long int crc = ~0;
     //
-    for(i=0; i<len; i++) {
-        crc ^= buf[i];
-        for(j=0; j<8; j++) {
-            if(crc & 1) {
-                crc = (crc >> 1) ^ 0xa001;
-            } else {
-                crc = crc >> 1;
-            }
+    while(size--) {
+        crc ^= *data++;
+        for(int i = 0; i < 8; i++) {
+            unsigned long int t = ~((crc&1)-1);
+            crc = (crc>>1) ^ (0xEDB88320 & t);
         }
     }
     return crc;
@@ -349,36 +345,10 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         fbdScreensBuf = (DESCR_MEM tScreen DESCR_MEM_SUFX *)curCap;
     }
 #endif // USE_HMI
-    // расчет и проверка CRC, CRC находится в FBD_SCHEMA_CRC, если это значение != -1, то CRC есть
-    if(FBD_SCHEMA_CRC16 != -1) {
-        // если результат -1, то CRC не используется (старая версия редактора)
-        // расчет указателя на конец описания схемы
-        DESCR_MEM unsigned char DESCR_MEM_SUFX *theend;
-#ifdef USE_HMI
-        // если HMI есть, то конец после тектовых описаний или экранов (если они есть)
-        theend = (DESCR_MEM unsigned char DESCR_MEM_SUFX *) fbdCaptionsBuf;
-
-        for(i=0; i < (fbdWpCount + fbdSpCount + 3); i++) {
-            while(*(theend++));
-        }
-        if(FBD_SCREEN_COUNT > 0) {
-            // экраны есть, выравниваем по границе
-            while((int)theend % 4) theend++;
-            // расчитываем указатель на последний экран
-            i = 0;
-            DESCR_MEM tScreen DESCR_MEM_SUFX *screen = (DESCR_MEM tScreen DESCR_MEM_SUFX *)theend;
-            while (i <= FBD_SCREEN_COUNT) {
-                screen = (tScreen *)((char *)screen + screen->len);
-                i++;
-            }
-            //
-            theend = (DESCR_MEM unsigned char DESCR_MEM_SUFX *)screen;
-        }
-#else
-        // если HMI нет, то конец сразу после параметров
-        theend = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
-#endif
-        if(fbdCRC(fbdDescrBuf, theend - fbdDescrBuf)) return -4;
+    // расчет и проверка CRC, если указан параметр FBD_SCHEMA_SIZE
+    if(FBD_SCHEMA_SIZE) {
+        // если результат 0, то CRC не используется (старая версия редактора)
+        if(fbdCRC32(fbdDescrBuf, FBD_SCHEMA_SIZE)) return -4;
     }
     // память для флагов расчета и фронта
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&3)?1:0);

@@ -294,7 +294,7 @@ void fbdChangeAllNetVars(void);
 #define FBD_OPT_NETVAR_PORT  2
 #define FBD_OPT_NETVAR_GROUP 3
 #define FBD_OPT_SCREEN_COUNT 4
-#define FBD_OPT_SCHEMA_CRC16 5
+#define FBD_OPT_SCHEMA_SIZE  5
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
 extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
@@ -304,7 +304,7 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_NETVAR_PORT  fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
 #define FBD_NETVAR_GROUP fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
 #define FBD_SCREEN_COUNT ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
-#define FBD_SCHEMA_CRC16 ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_CRC16)?fbdGlobalOptions[FBD_OPT_SCHEMA_CRC16]:-1)
+#define FBD_SCHEMA_SIZE ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
 
 //
 #ifdef USE_HMI
