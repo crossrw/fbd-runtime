@@ -897,29 +897,36 @@ Bytes description:
 
 ![fbd alg](https://www.mnppsaturn.ru/fbd2/images/alg.png)
 
-### Initialization
+### Инициализация
 
-Initialization is performed once at the beginning. Initialization may be performed again in the case of change circuit or a PLC reset. To initialize you must first call the function:
+Инициализация схемы должна быть выполнена один раз в начале работы. Инициализация можут быть выполнена повторно для сброса состояния схемы.
+Для инициализации схемы необходимо выполнить вызов функции:
 
 ```c
 int fbdInit(DESCR_MEM unsigned char *descr)
 ```
 
-__descr__ - pointer to array of scheme description.
-A negative _result_ - error:
-__-1__ - invalid element code in description;
-__-2__ - wrong value of END_MARK flag.
-Positive _result_ - the amount of RAM needed to run the scheme.
+__descr__ - указатель на массив описания схемы.
 
-Then, if there are no errors and enough RAM, you need to call:
+Отрицательное значение результата функции означает ошибку:  
+__-1__ - неверный код элемента в описании схемы;  
+__-2__ - несовпадение размерности сигнала или элемента;  
+__-3__ - массив описания содержит схему с неподдерживаемой версией;  
+__-4__ - ошибка при проверке контрольной суммы описания схемы.
+
+Положительное значение результата функции - требуемый объем RAM для выполнения схемы.
+
+Если вызов инициализаии схемы выполнен без ошибок и вы имеете необходимый объем RAM, то следующим шагом необходимо выполнить вызов инициализации памяти:
 
 ```c
 void fbdSetMemory(char *buf)
 ```
 
-__buf__ - pointer to RAM buffer. The function does not return a result. After this call, the scheme is ready.
+__buf__ - указатель на буфер памяти. Функция не возвращает результат.
 
-### Step by step execution
+После инициализации памяти схема готова к работе.
+
+### Пошаговое выполнение
 
 To calculate the circuit must periodically (eg in the main program loop) function call:
 
