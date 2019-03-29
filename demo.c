@@ -160,6 +160,13 @@ int main(void)
     // main loop
     // start = GetTickCount();
 
+    printf("IO hints:\n");
+    for(i=0; i<16; i++) {
+        printf(" type=0 index=%d text:'%s'\n", i, fbdHMIgetIOhint(0, i));
+        printf(" type=1 index=%d text:'%s'\n", i, fbdHMIgetIOhint(1, i));
+        printf("\n");
+    }
+
     i=0;
     while(i < CICLCOUNT) {
         i++;

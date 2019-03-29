@@ -22,6 +22,9 @@
 // 27-03-2019
 // + добавлена контрольная сумма для схемы
 
+// 29-03-2019
+// + добавлены хинты для входов и выходов контроллера
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
@@ -126,6 +129,15 @@ DESCR_MEM char DESCR_MEM_SUFX *fbdCaptionsBuf;
 //  ...
 // экраны (начало выровнено по границе 4-х байт)
 DESCR_MEM tScreen DESCR_MEM_SUFX *fbdScreensBuf;
+// screen0
+// screen1
+// ...
+// текстовые описания входов и выходов, количество указано в параметре FBD_OPT_HINTS_COUNT
+DESCR_MEM char DESCR_MEM_SUFX *fbdIOHints;
+// type(char), index(char), text, 0
+// type(char), index(char), text, 0
+// ...
+// контрольная сумма всей программы CRC32
 
 #endif // USE_HMI
 
@@ -331,18 +343,27 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
     // после текстовых строк точек контроля и регулирования идут еще 3 строки: имя проекта, версия проекта, дата создания проекта
     // расчет указателя на первый экран
-    if(FBD_SCREEN_COUNT > 0) {
-        // первый экран идет после текстовых описаний в количестве (fbdWpCount + fbdSpCount), причем его начало выровнено на 4 байта
-        curCap = fbdCaptionsBuf;
-        // перебираем все строки текстовых описаний
-        // 3 - это имя проекта, версия проекта, дата создания проекта
-        for(i=0; i < (fbdWpCount + fbdSpCount + 3); i++) {
-            while(*(curCap++));
+    // первый экран идет после текстовых описаний в количестве (fbdWpCount + fbdSpCount), причем его начало выровнено на 4 байта
+    curCap = fbdCaptionsBuf;
+    // перебираем все строки текстовых описаний
+    // 3 - это имя проекта, версия проекта, дата создания проекта
+    for(i=0; i < (fbdWpCount + fbdSpCount + 3); i++) {
+        while(*(curCap++));
+    }
+    // выравнивание curCap по границе 32 бита
+    while((int)curCap % 4) curCap++;
+    // ставим указатель на начало экранов
+    fbdScreensBuf = (DESCR_MEM tScreen DESCR_MEM_SUFX *)curCap;
+    // хинты входов и выходов идут после экранов
+    if(FBD_HINTS_COUNT > 0) {
+        // перебираем все экраны (если экраны есть) в поисках окончания
+        DESCR_MEM tScreen DESCR_MEM_SUFX *screen = fbdScreensBuf;
+        i = 0;
+        while (i < FBD_SCREEN_COUNT) {
+            screen = (tScreen *)((char *)screen + screen->len);
+            i++;
         }
-        // выравнивание curCap по границе 32 бита
-        while((int)curCap % 4) curCap++;
-        // ставим указатель на начало экранов
-        fbdScreensBuf = (DESCR_MEM tScreen DESCR_MEM_SUFX *)curCap;
+        fbdIOHints = (DESCR_MEM char DESCR_MEM_SUFX *)screen;
     }
 #endif // USE_HMI
     // расчет и проверка CRC, если указан параметр FBD_SCHEMA_SIZE
@@ -878,6 +899,30 @@ void fbdHMIgetDescription(tHMIdescription *pnt)
     pnt->version = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1);
     pnt->btime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2);
 #endif
+}
+// -------------------------------------------------------------------------------------------------------
+// возвращает указатель на текстовое описание (хинт) входа или выхода,
+// если такого описание не найдено, то возвращает NULL
+DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index)
+{
+    tSignal hintsCount = FBD_HINTS_COUNT;
+    if(!hintsCount) return NULL;                                                    // описаний нет
+    DESCR_MEM char DESCR_MEM_SUFX *curHint = fbdIOHints;
+    tSignal i = 0;
+    // цикл перебора всех описаний
+    while(1) {
+        // хинты хранятся в виде последовательности описаний:
+        // type(char), index(char), text, 0
+        // type(char), index(char), text, 0
+        // ...
+        if((*curHint == type)&&(*(curHint + 1) == index)) return curHint + 2;       // описание найдено
+        // переходим к следующему хинту
+        i++;
+        if(i >= hintsCount) return NULL;                                            // больше описаний нет
+        // расчет указателя на следующий хинт
+        curHint += 2;
+        while(*(curHint++));
+    }
 }
 // -------------------------------------------------------------------------------------------------------
 // расчет указателя на текстовое описание элемента по индексу описания

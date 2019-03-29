@@ -295,6 +295,7 @@ void fbdChangeAllNetVars(void);
 #define FBD_OPT_NETVAR_GROUP 3
 #define FBD_OPT_SCREEN_COUNT 4
 #define FBD_OPT_SCHEMA_SIZE  5
+#define FBD_OPT_HINTS_COUNT  6
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
 extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
@@ -305,6 +306,7 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_NETVAR_GROUP fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
 #define FBD_SCREEN_COUNT ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
 #define FBD_SCHEMA_SIZE ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
+#define FBD_HINTS_COUNT ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
 
 //
 #ifdef USE_HMI
@@ -339,6 +341,11 @@ typedef struct hmidescription_t {
 //
 // получить структуру с описанием проекта
 void fbdHMIgetDescription(tHMIdescription *pnt);
+//
+// возвращает указатель на текстовое описание (хинт) входа или выхода,
+// если такого описание не найдено, то возвращает NULL
+DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index);
+
 //
 #endif // USE_HMI
 
