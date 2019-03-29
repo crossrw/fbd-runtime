@@ -342,8 +342,11 @@ typedef struct hmidescription_t {
 // получить структуру с описанием проекта
 void fbdHMIgetDescription(tHMIdescription *pnt);
 //
-// возвращает указатель на текстовое описание (хинт) входа или выхода,
-// если такого описание не найдено, то возвращает NULL
+// возвращает указатель на текстовое описание (хинт) входа или выхода, если такого описание не найдено, то возвращает NULL
+// значение type:
+// 0 - входы
+// 1 - выходы
+// значение index соответствует значению параметра index функций FBDgetProc(type, index) и FBDsetProc(type, index, *value)
 DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index);
 
 //
