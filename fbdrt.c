@@ -397,7 +397,6 @@ void fbdSetMemory(char *buf, bool needReset)
     tOffset curInputOffset = 0;
     tOffset curParameterOffset = 0;
     tOffset curStorageOffset = 0;
-    unsigned char elem;
 #ifdef USE_HMI
     tOffset curWP = 0;
     tOffset curSP = 0;
@@ -442,7 +441,7 @@ void fbdSetMemory(char *buf, bool needReset)
         *(parameterOffsets + i) = curParameterOffset;
         *(storageOffsets + i) = curStorageOffset;
         //
-        elem = fbdDescrBuf[i] & ELEMMASK;
+        unsigned char elem = fbdDescrBuf[i] & ELEMMASK;
         curInputOffset += FBDdefInputsCount[elem];
         curParameterOffset += FBDdefParametersCount[elem];
         curStorageOffset += FBDdefStorageCount[elem];
@@ -734,12 +733,11 @@ void fbdDoStep(tSignal period)
 {
     tSignal value, param;
     tElemIndex index;
-    unsigned char element;
     // сброс признаков расчета и нарастающего фронта
     memset(fbdFlagsBuf, 0, fbdFlagsByteCount);
     // основной цикл расчета
     for(index=0; index < fbdElementsCount; index++) {
-        element = fbdDescrBuf[index] & ELEMMASK;
+        unsigned char element = fbdDescrBuf[index] & ELEMMASK;
         switch(element) {
             // элементы с таймером
             case 12:                                                        // timer TON
