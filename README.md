@@ -77,9 +77,6 @@ FBD - один из языков программирования описанн
     - [Мультиплексор](#a5.7.4)
     - [Ограничитель](#a5.7.5)
 * [**Установка библиотеки**](#a6)
-* [**Формат описания схемы**](#a7)
-  + [Внутреннее устройство](#a7.1)
-  + [Пример](#a7.2)
 * [**Выполнение**](#a8)
 
 <a name="a1"></a>
@@ -678,34 +675,37 @@ TON - это таймер с задержкой включения. Элемен
 
 <a name="a6"></a>
 
-### Установка библиотеки
+### Установка и настройка библиотеки
 
-Setting is done by editing `fbdrt.h` in the following sequence.
+Установка библиотеки заключается в копировании файлов `fbdrt.h` и `fbdrt.c` в свой проект. Настройка состоит в редактировании файла `fbdrt.h` в соответствии со своими требованиями.
 
-1. Select the data type used to store the signal.
-2. Select the data type used to store the index of the item.
-3. If necessary, change the definition `ROM_CONST` and `DESCR_MEM`.
-4. Choose to use or not to use optimization execution speed (defines `SPEED_OPT`).
-5. Choose to use or not to use HMI functions (defines `USE_HMI`).
-6. Write your implementation functions `FBDgetProc()` and `FBDsetProc()`.
+Вы можете изменить следующие определения в файле `fbdrt.h`:
 
-On the choice of the type of data signal depends with what signals can work your scheme. In addition, it affects memory usage and speed of calculation. For embedded microcontrollers that can be important. In general, the data type must describe signed integer. If you are not sure what to choose, use a 2-byte integer. In addition, you must specify the maximum and minimum value of the signal. For example, you can use the definition from limits.h. For example:
+1. Выберите тип данных, используемый для хранения значений сигналов.
+2. Выберите тип данных используемый для индекса элементов.
+3. Если необходимо измените определения `ROM_CONST` и `DESCR_MEM`.
+4. Выберите необходимость использования оптимизации по скорости выполнения (определение `SPEED_OPT`).
+5. Выберите необходимость использования функций HMI (определение `USE_HMI`).
+6. Напишите свою реализацию функций `FBDgetProc()` и `FBDsetProc()`.
+7. Если вы используете экраны HMI напишите свою реализацию функций `FBDdrawXXXXXX()`.
 
-```c
-// data type for FBD signal
-typedef int16_t tSignal;
-#define MAX_SIGNAL INT16_MAX
-#define MIN_SIGNAL INT16_MIN
-```
-
-The data type of the element index affects how many elements can be in the scheme. In the general case should describe the type of unsigned integer. Type `unsigned char` will create a 255 elements, type `unsigned short` - 65535 elements. This is usually more than enough. Selected type affects the size of the memory used. Example:
+От выбора типа данных для хранения сигналов зависит то, сигналы каких значений сможет обрабатывать ваша схема. Кроме того, от этого выбора
+зависят объем программы и объем используемой ею памяти и скорость расчета схемы. Для небольших встариваемых микроконтроллеров это может быть важным. В общем случае тип данных должен обеспечивать хранение целого числа со знаком. Если вы не уверены в выборе, то рекомендую остановиться на
+значении "по умолчанию": 32-х битное целое число со знаком. Выбор типа производится установкой значения определения `SIGNAL_SIZE`:
 
 ```c
-// data type for element index
-typedef unsigned char tElemIndex;
+// размер памяти для сигнала схемы (1, 2 или 4)
+#define SIGNAL_SIZE 4
 ```
 
-Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allocate memory for an array of constants and circuit description. Their values depend on the compiler and the location of arrays. For example, when using compiler xc8 (Microchip) used to place data in a FLASH must specifiers `const`:
+Выбор типа данных для индекса элемента определяет как много элементов может быть в вашей схеме. Тип данных должен обеспечивать возможность хранения целых чисел без знака. Выбор типа производится установкой значения определения `INDEX_SIZE`. Рекомендуем остановить свой выбор на значении "по умолчанию" 2, в этом случае в вашей схеме может быть до 65535 элементов.
+
+```c
+// размер пямяти для индекса элемента (1 или 2)
+#define INDEX_SIZE 2
+```
+
+Определения `ROM_CONST` и `DESCR_MEM` используются для описания памяти в которой размещаются константы и массив описания схемы соответственно. Значения зависят от используемого вами компилятора. Для примера, при использовании компилятора xc8 (Microchip) и размещении данных в памяти FLASH необходимо использовать `const`:
 
 ```c
 // data in ROM/FLASH
@@ -714,9 +714,9 @@ Definition `ROM_CONST` and `DESCR_MEM` describe specifiers that are used to allo
 #define DESCR_MEM const
 ```
 
-Inclusion of a definition `SPEED_OPT` reduces the calculation time is approximately 6 times (for medium and large schemes), the memory requirement increases by about 3 times. When you enable `SPEED_OPT`, at initialization time performed preliminary calculations pointers, that reduce runtime.
+Использование определения `SPEED_OPT` уменьшает время расчета схемы примерно в 6 раз(для средних и больших схем), объем необходимой памяти RAM при этом увеличивается примерно в 3 раза. Когда вы включаете определение `SPEED_OPT`, то в момент инициализации производится предварительный расчет некоторых таблиц с указателями, использование которых уменьшает время расчета схемы.
 
-Disabling definition `USE_HMI` allow slightly reduce the size of the library code. This can be useful if your PLC is not equipped with an LCD indicator. Be careful: if you disable, setpoints can return uncertain data ! Example:
+Определение `USE_HMI` необходимо в случае, когда ваш PLC содержит средства организации интрерфейса с человеком. Такими средствами могут быть например экран и кнопки. Будьте внимательны: если вы отключите HMI точки управления будут возвращать неопределенные данные! Пример:
 
 ```c
 // needed if you use HMI functions
@@ -725,14 +725,17 @@ Disabling definition `USE_HMI` allow slightly reduce the size of the library cod
 #define SPEED_OPT
 ```
 
-Functions `FBDgetProc()` and `FBDsetProc()` provide interaction between your circuit with real hardware PLC. Function `FBDgetProc()` used for reading input signals (pin) or stored NVRAM (nonvoltage memory) values. Function `FBDsetProc()` used for writing output signals (pin) or NVRAM values. Their implementation depends on the specific task. Encouraged to adhere to the following rules:
+Функции `FBDgetProc()` и `FBDsetProc()` служат для связи схемы с реальными входами и выходами вашего PLC.
 
-* For discrete inputs and outputs use the values `0` and `1`.
-* For analogue inputs and outputs use the values expressed in engineering units, possibly with some decimal factor. For this, in some cases, the conversion function should perform PLC raw input data to engineering units and vice versa. For example the value of temperature sensor +10.5 C must be converted to a number 105.
-* Do not use a direct entry in the EEPROM because Library calls `FBDsetProc()` each time you change the value of any trigger or timer. Direct writing to EEPROM can reduce its life span. One solution is to use a delayed write or use of RAM with battery-powered.
+Функция `FBDgetProc()` используется для чтения состояния входных сигналов (контактов) или значений, сохраненных в памяти NVRAM.
 
-In the absence of part of the PLC EEPROM or network access these functions can not be implemented.
-Example empty (only for debug) implementation of read and write functions:
+Функция `FBDsetProc()` используется для записии значений выходных сигналов (контактов) или для сохранения значений в память NVRAM.
+
+Реализация этих функций зависит от специфики ваших задач. В общем случае рекомендуем придерживаться следующих правил:
+
+* Для дискретных входов и выходов использовать значения `0` и `1`. При этом значение `0` должно соответствовать пассивному состоянию: выключен, разомкнут и т.п.
+* Для аналоговых входов и выходов значения которых представлены в инженерных единицах измерения (градусы, бары, вольты) необходимо использовать множитель, который преобразует эти значения в целые числа. Например для входа к которому подключен датчик температуры можно использовать множитель 100, который преобразует значение температуры на датчике +10.5 C в значение сигнала схемы 1050.
+* Не используйте прямую запись в EEPROM при каждом вызове `FBDsetProc()`: библиотека далает такие вызовы при каждом изменении состяния тригеров, таймеров и генератора. Частая запись в EEPROM может значительно сократить срок ее службы. Решением может быть отложенная запись или использование памяти RAM с питанием от батарейки.
 
 ```c
 tSignal FBDgetProc(char type, tSignal index)
@@ -760,136 +763,6 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
     }
 }
 ```
-
-<a name="a7"></a>
-
-### Формат описания схемы
-
-<a name="a7.1"></a>
-
-#### Внутреннее устройство
-
-Description of the scheme is an array of data that may be created by the editor or other means. Dataset should be placed in the memory controller, such as a FLASH or RAM. A pointer to the array is passed to a function `fbdInit(DESCR_MEM unsigned char *buf)`. The array consists of three parts:
-
-  1. List of elements (ending flag `END_MARK`)
-  2. Description of connecting the input pins elements
-  3. Values of elements parameters
-
-The format of the array shown in the table below:
-<table>
- <tr><td><b>Offset</b></td><td><b>Size</b></td><td><b>Value</b></td><td><b>Desciption</b></td></tr>
- <tr><td>0</td><td>1</td><td>type of element 1</td><td>description of element 1</td></tr>
- <tr><td>1</td><td>1</td><td>type of element 2</td><td>description of element 2</td></tr>
- <tr><td></td><td>1</td><td>...</td><td>...</td></tr>
- <tr><td>N-1</td><td>1</td><td>type of element N</td><td>description of element N</td></tr>
- <tr><td>N</td><td>1</td><td>END_MARK</td><td>terminator elements descriptions</td></tr>
- <tr><td>N+1</td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element 1</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K(1) element 1</td></tr>
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element 2</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K(2) element 2</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input 1 element N</td></tr>
- <tr><td></td><td>sizeof(tElemIndex)</td><td>element index</td><td>index of the element connected to the input K(N) element N</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 1 of the element 1</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 2 of the element 1</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(1) of the element 1</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 1 of the element N</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter 2 of the element N</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
- <tr><td></td><td>sizeof(tSignal)</td><td>parameter value</td><td>parameter M(N) of the element N</td></tr>
- <tr><td></td><td>variable</td><td>1..255</td><td>chars of caption 1</td></tr>
- <tr><td></td><td>1</td><td>0</td><td>end of caption 1</td></tr>
- <tr><td></td><td>variable</td><td>1..255</td><td>chars of caption 2</td></tr>
- <tr><td></td><td>1</td><td>0</td><td>end of caption 2</td></tr>
- <tr><td></td><td>...</td><td>...</td><td>...</td></tr>
-</table>
-Where: _N_-elements count, _K(i)_-number of inputs of an element __i__, _M(i)_-number of parameters of an element __i__.
-
-`END_MARK` is a sign of the end of the list of elements, in addition, it contains information about the size and value of the signal element index. Its value is defined in the file `fbdrt.h` as:
-
-```c
-#define END_MARK (unsigned char)((sizeof(tSignal)|(sizeof(tElemIndex)<<3))|0x80)
-// bit 0-2: sizeof(tSignal)
-// bit 3-4: sizeof(tElemIndex)
-// bit 5:   reserved
-// bit 6:   reserved
-// bit 7:   1
-```
-
-Function `fbdInit()` checks the value of the `END_MARK` before starting the scheme.
-
-Number of inputs and parameters count depend on the element type code. If the element has no inputs or parameters, the values in the array are missing. Code can be written as a bit mask:
-
-```c
-// bit 0-5: code of element type
-// bit 6:   flag of inverse output
-// bit 7:   0
-```
-
-Summary table of types of elements below:
-<table>
- <tr><td><b>Element</b></td><td><b>Code</b></td><td><b>Code for inverted output </b></td><td><b>Inputs</b></td><td><b>Parameters</b></td></tr>
- <tr><td>Output pin</td><td>0</td><td>-</td><td>1</td><td>1</td></tr>
- <tr><td>Const</td><td>1</td><td>-</td><td>0</td><td>1</td></tr>
- <tr><td>Logical NOT</td><td>2</td><td>-</td><td>1</td><td>0</td></tr>
- <tr><td>Logical AND</td><td>3</td><td>67</td><td>2</td><td>0</td></tr>
- <tr><td>Logical OR</td><td>4</td><td>68</td><td>2</td><td>0</td></tr>
- <tr><td>Logical XOR</td><td>5</td><td>69</td><td>2</td><td>0</td></tr>
- <tr><td>SR latch</td><td>6</td><td>70</td><td>2</td><td>0</td></tr>
- <tr><td>D flip-flop</td><td>7</td><td>71</td><td>2</td><td>0</td></tr>
- <tr><td>Arithmetical ADD</td><td>8</td><td>-</td><td>2</td><td>0</td></tr>
- <tr><td>Arithmetical SUB</td><td>9</td><td>-</td><td>2</td><td>0</td></tr>
- <tr><td>Arithmetical MUL</td><td>10</td><td>-</td><td>2</td><td>0</td></tr>
- <tr><td>Arithmetical DIV</td><td>11</td><td>-</td><td>2</td><td>0</td></tr>
- <tr><td>Timer TON</td><td>12</td><td>76</td><td>2</td><td>0</td></tr>
- <tr><td>Comparator</td><td>13</td><td>77</td><td>2</td><td>0</td></tr>
- <tr><td>Output var</td><td>14</td><td>-</td><td>1</td><td>1</td></tr>
- <tr><td>Input pin</td><td>15</td><td>-</td><td>0</td><td>1</td></tr>
- <tr><td>Input var</td><td>16</td><td>-</td><td>0</td><td>1</td></tr>
- <tr><td>PID regulator</td><td>17</td><td>-</td><td>4</td><td>0</td></tr>
- <tr><td>Integrator</td><td>18</td><td>-</td><td>3</td><td>0</td></tr>
- <tr><td>Up-down counter</td><td>19</td><td>-</td><td>3</td><td>0</td></tr>
- <tr><td>Multiplexer</td><td>20</td><td>-</td><td>5</td><td>0</td></tr>
- <tr><td>Abs value</td><td>21</td><td>-</td><td>1</td><td>0</td></tr>
- <tr><td>WatchPoint</td><td>22</td><td>-</td><td>1</td><td>0</td></tr>
- <tr><td>SetPoint</td><td>23</td><td>-</td><td>1</td><td>2</td></tr>
- <tr><td>Timer TP</td><td>24</td><td>88</td><td>2</td><td>0</td></tr>
- <tr><td>Min</td><td>25</td><td>-</td><td>2</td><td>0</td></tr>
- <tr><td>Max</td><td>26</td><td>-</td><td>2</td><td>0</td></tr>
- <tr><td>Limit</td><td>27</td><td>-</td><td>3</td><td>0</td></tr>
- <tr><td>Equal</td><td>28</td><td>92</td><td>2</td><td>0</td></tr>
-</table>
-
-<a name="a7.2"></a>
-
-#### Example
-
-For example, choose a small circuit consisting of a constant element (SRC1), logic inverter (NOT1) and the output terminal (OUT1), see the picture below:
-
-![fbd example](https://www.mnppsaturn.ru/fbd2/images/demo2.png)
-
-Description of the scheme will be as follows (for the case when the `tSignal` is defined as `short`, `tElemIndex` - `unsigned char`):
-
-```c
-{0x02, 0x01, 0x00, 0x8A, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}
-```
-
-Bytes description:
-<table>
- <tr><td><b>Offset</b></td><td><b>Value</b></td><td><b>Description</b></td></tr>
- <tr><td>0</td><td>0x02</td><td>Element logical NOT</td></tr>
- <tr><td>1</td><td>0x01</td><td>Element Const</td></tr>
- <tr><td>2</td><td>0x00</td><td>Element Output pin</td></tr>
- <tr><td>3</td><td>0x8A</td><td>END_MARK</td></tr>
- <tr><td>4</td><td>0x01</td><td>Input 1 of element index 0 (NOT) connected to output element index 1 (Const)</td></tr>
- <tr><td>5</td><td>0x00</td><td>Input 1 of element index 2 (Output) connected to output element index 0 (NOT)</td></tr>
- <tr><td>6</td><td>0x0000</td><td>Parameter of element index 1 (Const). Value of constant is 0</td></tr>
- <tr><td>8</td><td>0x0000</td><td>Parameter of element index 1 (Output). Number of output pin is 0</td></tr>
-</table>
 
 <a name="a8"></a>
 
