@@ -1,3 +1,11 @@
+/**
+ * @file fbdrt.c
+ * @author crossrw1@gmail.com
+ * @brief FBD-Runtime library
+ * @version 9.0
+ * @date 2021-11-17
+ */
+
 #include <string.h>
 #include "fbdrt.h"
 
@@ -25,23 +33,31 @@
 // 29-03-2019
 // + добавлены хинты для входов и выходов контроллера
 
+// 14-11-2021
+// + Modbus
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
-// FBDgetProc(): чтение значения входного сигнала или NVRAM
-// type - тип чтения
-//  0 - входной сигнал
-//  1 - значение NVRAM
-// index - индекс читаемого значения
-// result - прочитанное значение сигнала
+
+/**
+ * @brief Чтение значения входного сигнала или NVRAM.
+ * Должна быть описана в основной программе.
+ * 
+ * @param type Tип чтения: 0 - входной сигнал, 1 - значение NVRAM
+ * @param index Индекс читаемого значения
+ * @return tSignal Прочитанное значение сигнала
+ */
 extern tSignal FBDgetProc(char type, tSignal index);
 
-// FBDsetProc() запись значения выходного сигнала или NVRAM
-// type - тип записи
-//  0 - запись выходного сигнала
-//  1 - запись в NVRAM
-// index - индекс записываемого значения
-// value - указатель на значение
+/**
+ * @brief Запись значения выходного сигнала или NVRAM.
+ * Должна быть описана в основной программе.
+ * 
+ * @param type Tип записи: 0 - выходной сигнал, 1 - значение NVRAM
+ * @param index Индекс записываемого значения
+ * @param value Записываемое значение.
+ */
 extern void FBDsetProc(char type, tSignal index, tSignal *value);
 // -----------------------------------------------------------------------------
 
@@ -90,7 +106,15 @@ typedef struct fbdstackitem_t {
 
 void setCalcFlag(tElemIndex element);
 void setRiseFlag(tElemIndex element);
-void setChangeVarFlag(tElemIndex element);
+void setChangeVarFlag(tElemIndex index);
+void setChangeModbusFlag(tElemIndex index);
+bool getAndClearChangeModbusFlag(tElemIndex index);
+void setModbusNoResponse(tElemIndex index);
+void setModbusResponse(tElemIndex index, tSignal response);
+void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest);
+void swapModbusByteOrder(tModbusData *data);
+void swapModbusWordOrder(tModbusData *data);
+unsigned long int getCoilBitsMask(unsigned count);
 
 char getCalcFlag(tElemIndex element);
 char getRiseFlag(tElemIndex element);
@@ -163,12 +187,18 @@ char *fbdFlagsBuf;
 //  Flags1
 //  ...
 //  FlagsN
-// флаги "значение изменилось", 1 бит для каждого элемента "Output VAR" (14)
+// флаги "значение изменилось", 1 бит для каждого элемента ELEM_OUT_VAR (14)
 char *fbdChangeVarBuf;
 //  ChangeVar0
 //  ChangeVar1
 //  ...
 //  ChangeVarN
+// флаги "значение изменилось", 1 бит для каждого элемента ELEM_OUT_MDBS (34)
+char *fbdChangeModbusBuf;
+//  ChangeModbus0
+//  ChangeModbus1
+//  ...
+//  ChangeModbusN
 
 #ifdef SPEED_OPT
 // только при использовании оптимизации по скорости выполнения
@@ -209,6 +239,12 @@ tElemIndex fbdElementsCount;
 tElemIndex fbdStorageCount;
 tElemIndex fbdFlagsByteCount;
 tElemIndex fbdChangeVarByteCount;
+tElemIndex fbdChangeModbusByteCount;
+
+tElemIndex fbdModbusRTUCount;
+tElemIndex fbdModbusTCPCount;
+tElemIndex fbdModbusRTUIndex;
+tElemIndex fbdModbusTCPIndex;
 
 #ifdef USE_HMI
 tElemIndex fbdWpCount;
@@ -219,19 +255,72 @@ unsigned short fbdCurrentScreenTimer;        // таймер текущего э
 //
 char fbdFirstFlag;
 
-#define ELEMMASK 0x3F
-#define INVERTFLAG 0x40
-
-#define MAXELEMTYPEVAL 32u
-
 // массив с количествами входов для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[MAXELEMTYPEVAL+1] =     {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[MAXELEMTYPEVAL+1] = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1};
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2};
 // массив с количествами хранимых данных для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[MAXELEMTYPEVAL+1]    = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1};
-//                                                                                0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3
-//                                                                                0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0};
+//                                                                                 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3
+//                                                                                 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4
+// Параметры элемента ELEM_INP_MDBS (чтение Modbus)
+//
+// |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |  FMT/CNT  |WO|BO| FNC |   Адрес устройства    |             Адрес регистра MODBUS             |
+//
+// BO   - byte order: 0 - HiLo, 1 - LoHi
+// WO   - word order: 0 - HiLo, 1 - LoHi
+// FNC  - Modbus function: 
+//  00 - read coil (0x01)
+//  01 - read discrete input (0x02)
+//  10 - read holding registers (0x03)
+//  11 - read input registers (0x04)
+// FMT/CNT - формат читаемых данных (для "read input registers" и "read holding registers") или количество регистров для чтения (для "read coil" и "read discrete input")
+// FMT  - формат читаемых данных (для "read input registers" и "read holding registers"):
+//  0000    - uint16 (0..65535) 1 регистр
+//  0001    - int16 (0..65535)  1 регистр
+//  0010    - int32             2 регистра
+//  MM11    - single            2 регистра, MM - множитель 00 - 1, 01 - 10, 10 - 100, 11 - 1000
+// CNT  - количество читаемых бит (для "read coil" и "read discrete input"):
+//  WO = 0
+//  0000    - 1
+//  ...
+//  1111    - 16
+//  WO = 1
+//  0000    - 17
+//  ...
+//  1111    - 32
+//
+// Параметры элемента ELEM_OUT_MDBS (запись Modbus)
+//
+// |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |  FMT/CNT  |WO|BO| FNC |   Адрес устройства    |             Адрес регистра MODBUS             |
+//
+// BO   - byte order: 0 - HiLo, 1 - LoHi
+// WO   - word order: 0 - HiLo, 1 - LoHi
+// FNC  - Modbus function: 
+//  00 - Write Single Coil (0x05)
+//  01 - Write Multiple Coils (0x0F)
+//  10 - Write Single Register (0x06)
+//  11 - Write Multiple registers (0x10)
+// FMT/CNT - формат записываемых данных (для "Write Single Register" и "Write Multiple registers") или количество регистров для записи (для "Write Multiple Coils")
+// FMT  - формат данных (для "Write Single Register" и "Write Multiple registers"):
+//  0000    - uint16 (0..65535) 1 регистр
+//  0001    - int16 (0..65535)  1 регистр
+//  0010    - int32             2 регистра
+//  MM11    - single            2 регистра, MM - делитель 00 - 1, 01 - 10, 10 - 100, 11 - 1000 (только Write Multiple registers)
+// CNT  - количество записываемых бит (для "Write Multiple Coils"):
+//  WO = 0
+//  0000    - 1
+//  ...
+//  1111    - 16
+//  WO = 1
+//  0000    - 17
+//  ...
+//  1111    - 32
+//
 
 #ifdef SPEED_OPT
 // описания "быстрых" вариантов функций
@@ -291,6 +380,19 @@ unsigned long int fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int siz
 }
 
 // -------------------------------------------------------------------------------------------------------
+
+/**
+ * @brief Инициализация схемы
+ * Функция должна быть вызвана один раз в самом начале работы.
+ * Результат: количество ОЗУ, необходимое для выполнения схемы (значение больше 0) или (в случае ошибки) отрицательное значение:
+ * ERR_INVALID_ELEMENT_TYPE - неверный код элемента в описании схемы
+ * ERR_INVALID_SIZE_TYPE    - неверный размер tSignal или tElementIndex
+ * ERR_INVALID_LIB_VERSION  - несовпадает версия программы и библиотеки
+ * ERR_INVALID_CHECK_SUM    - неверная контрольная сумма программы
+
+ * @param buf Указатель на массив описания схемы
+ * @return Количество байт RAM, необходимое для выполнения схемы или код ошибки
+ */
 int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
 {
     tOffset inputs = 0;
@@ -300,6 +402,12 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     fbdElementsCount = 0;
     fbdStorageCount = 0;
     fbdChangeVarByteCount = 0;
+    fbdChangeModbusByteCount = 0;
+    //
+    fbdModbusRTUIndex = MAX_INDEX;
+    fbdModbusTCPIndex = MAX_INDEX;
+    fbdModbusRTUCount = 0;
+    fbdModbusTCPCount = 0;
 #ifdef USE_HMI
     fbdWpCount = 0;
     fbdSpCount = 0;
@@ -307,37 +415,49 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     tElemIndex i;
 #endif // USE_HMI
     //
-    if(!buf) return -1;
+    if(!buf) return ERR_INVALID_ELEMENT_TYPE;
     fbdDescrBuf = buf;
     // цикл по всем элементам
     while(1) {
         elem = fbdDescrBuf[fbdElementsCount];
         if(elem & 0x80) break;
         elem &= ELEMMASK;
-        if(elem > MAXELEMTYPEVAL) return -1;
+        if(elem >= ELEM_TYPE_COUNT) return ERR_INVALID_ELEMENT_TYPE;
         // подсчет всех входов
         inputs += FBDdefInputsCount[elem];
         // подсчет всех параметров
         parameters += FBDdefParametersCount[elem];
         // подсчет всех хранимых параметров
         fbdStorageCount += FBDdefStorageCount[elem];
+        // подсчёт элементов некоторых типов
+        switch (elem) {
+            case ELEM_OUT_VAR:
+                fbdChangeVarByteCount++;                // подсчёт выходных переменных
+                break;
+            case ELEM_OUT_MDBS:
+                fbdChangeModbusByteCount++;             // подсчёт элементов записи в Modbus
+                break;
 #ifdef USE_HMI
-        if(elem == 22) fbdWpCount++; else if(elem == 23) fbdSpCount++;
+            case ELEM_WP:
+                fbdWpCount++;                           // точки контроля
+                break;
+            case ELEM_SP:
+                fbdSpCount++;                           // точки регулирования
+                break;
 #endif // USE_HMI
-        // подсчет выходных переменных
-        if(elem == 14) fbdChangeVarByteCount++; 
-        // общий подсчет элементов
+        }
+        // общий подсчёт элементов
         fbdElementsCount++;
     }
     // проверка правильности флага завершения
-    if(elem != END_MARK) return -2;
+    if(elem != END_MARK) return ERR_INVALID_SIZE_TYPE;
     // расчет указателей
     fbdInputsBuf = (DESCR_MEM tElemIndex DESCR_MEM_SUFX *)(fbdDescrBuf + fbdElementsCount + 1);
     fbdParametersBuf = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdInputsBuf + inputs);
     fbdGlobalOptionsCount = (DESCR_MEM unsigned char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
     fbdGlobalOptions = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdGlobalOptionsCount + 1);
     // проверка версии программы
-    if(*fbdGlobalOptions > FBD_LIB_VERSION) return -3;
+    if(*fbdGlobalOptions > FBD_LIB_VERSION) return ERR_INVALID_LIB_VERSION;
 #ifdef USE_HMI
     // указатель на начало текстовых строк точек контроля и регулирования
     fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
@@ -366,27 +486,36 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         fbdIOHints = (DESCR_MEM char DESCR_MEM_SUFX *)screen;
     }
 #endif // USE_HMI
-    // расчет и проверка CRC, если указан параметр FBD_SCHEMA_SIZE
+    // расчёт и проверка CRC, если указан параметр FBD_SCHEMA_SIZE
     if(FBD_SCHEMA_SIZE) {
         // если результат 0, то CRC не используется (старая версия редактора)
-        if(fbdCRC32(fbdDescrBuf, FBD_SCHEMA_SIZE)) return -4;
+        if(fbdCRC32(fbdDescrBuf, FBD_SCHEMA_SIZE)) return ERR_INVALID_CHECK_SUM;
     }
     // память для флагов расчета и фронта
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&3)?1:0);
     // память для флагов изменений значения выходной переменной
     fbdChangeVarByteCount = (fbdChangeVarByteCount>>3) + ((fbdChangeVarByteCount&7)?1:0);
+    // память для флагов изменений значения записи в Modbus
+    fbdChangeModbusByteCount = (fbdChangeModbusByteCount>>3) + ((fbdChangeModbusByteCount&7)?1:0);
     //
 #ifdef SPEED_OPT
 #ifdef USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
 #else  // USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdElementsCount*3*sizeof(tOffset);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset);
 #endif // USE_HMI
 #else  // SPEED_OPT
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount;
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount;
 #endif // SPEED_OPT
 }
-// -------------------------------------------------------------------------------------------------------
+
+/**
+ * @brief Инициализация памяти схемы
+ * Функция должна быть вызвана после fbdInit().
+ *
+ * @param buf Указатель на буфер памяти (размер возвращается fbdInit()), используемой при расчёте схемы
+ * @param needReset Признак необходимости сброса NVRAM после загрузки новой (ранее не выполнявщейся) схемы
+ */
 void fbdSetMemory(char *buf, bool needReset)
 {
     tElemIndex i;
@@ -403,15 +532,23 @@ void fbdSetMemory(char *buf, bool needReset)
     DESCR_MEM char DESCR_MEM_SUFX *curCap;
 #endif // USE_HMI
 #endif // SPEED_OPT
-    fbdMemoryBuf = (tSignal *)buf;
+    fbdModbusRTUIndex = MAX_INDEX;
+    fbdModbusTCPIndex = MAX_INDEX;
+    fbdModbusRTUCount = 0;
+    fbdModbusTCPCount = 0;
+    //
+    fbdMemoryBuf        = (tSignal *)buf;
     // инициализация указателей
-    fbdStorageBuf = fbdMemoryBuf + fbdElementsCount;
-    fbdFlagsBuf = (char *)(fbdStorageBuf + fbdStorageCount);
-    fbdChangeVarBuf = (char *)(fbdFlagsBuf + fbdFlagsByteCount);
+    fbdStorageBuf       = fbdMemoryBuf + fbdElementsCount;
+    fbdFlagsBuf         = (char *)(fbdStorageBuf + fbdStorageCount);
+    fbdChangeVarBuf     = (char *)(fbdFlagsBuf + fbdFlagsByteCount);
+    fbdChangeModbusBuf  = (char *)(fbdChangeVarBuf + fbdChangeVarByteCount);
     // инициализация памяти (выходы элементов)
     memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
     // инициализация памяти (установка всех флагов изменения значения)
     fbdChangeAllNetVars();
+    // установка всех флагов изменения значений записи в Modbus
+    if(fbdChangeModbusByteCount > 0) memset(fbdChangeModbusBuf, 255, fbdChangeModbusByteCount);
     // восстановление значений триггеров из nvram
     for(i = 0; i < fbdStorageCount; i++) {
         if(needReset) {
@@ -423,7 +560,7 @@ void fbdSetMemory(char *buf, bool needReset)
     }
 #ifdef SPEED_OPT
     // инициализация буферов быстрого доступа
-    inputOffsets = (tOffset *)(fbdChangeVarBuf + fbdChangeVarByteCount);
+    inputOffsets = (tOffset *)(fbdChangeModbusBuf + fbdChangeModbusByteCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
     storageOffsets = parameterOffsets + fbdElementsCount;
     //
@@ -448,13 +585,13 @@ void fbdSetMemory(char *buf, bool needReset)
         //
 #ifdef USE_HMI
         switch(elem) {
-            case 22:
+            case ELEM_WP:
                 (wpOffsets + curWP)->index = i;
                 (wpOffsets + curWP)->caption = curCap;
                 curWP++;
                 while(*(curCap++));
                 break;
-            case 23:
+            case ELEM_SP:
                 (spOffsets + curSP)->index = i;
                 (spOffsets + curSP)->caption = curCap;
                 curSP++;
@@ -464,12 +601,25 @@ void fbdSetMemory(char *buf, bool needReset)
 #endif // USE_HMI
     }
 #endif // SPEED_OPT
+    // подсчёт количества элементов Modbus и инициализация значений чтения Modbus
+    // цикл по всем элементам
+    for(i=0; i < fbdElementsCount; i++) {
+        switch (fbdDescrBuf[i] & ELEMMASK) {
+            case ELEM_INP_MDBS:
+                // установка значения элемента на значение по умолчанию
+                // параметр 2: значение по умолчанию
+                fbdMemoryBuf[i] = FBDGETPARAMETER(i, 2);
+            case ELEM_OUT_MDBS:
+                // параметр 0: IP-адрес
+                if(FBDGETPARAMETER(i, 0)) fbdModbusTCPCount++; else fbdModbusRTUCount++;
+        }
+    }
     // инициализация входных переменных
     if(needReset) {
         // при загрузке новой схемы значение входных сетевых переменных (до того, как они будут получены) равны 0, это не совсем хорошо...
         // инициализируем их значениями "по умолчанию" из программы
         for(i = 0; i < fbdElementsCount; i++) {
-            if(fbdDescrBuf[i] == 16) {
+            if(fbdDescrBuf[i] == ELEM_INP_VAR) {
                 fbdSetStorage(i, 0, FBDGETPARAMETER(i, 1));
             }
         }
@@ -489,10 +639,9 @@ void fbdSetMemory(char *buf, bool needReset)
     //
     fbdFirstFlag = 1;
 }
+
 // -------------------------------------------------------------------------------------------------------
-
 #ifdef USE_HMI
-
 // проверка видимости экранного элемента
 bool isScrElemVisible(tScrElemBase *elem)
 {
@@ -692,7 +841,13 @@ void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
     FBDdrawEnd();
 }
 
-// выполнение расчета схемы и перерисовка экрана при необходимости
+/**
+ * @brief Выполнение одного шага вычисления схемы.
+ * Функция выполняет один шаг вычисления схемы и перерисовку указанноего экрана при необходимости.
+ * 
+ * @param period Время с момента предыдущего вызова fbdDoStepEx(), например в мс.
+ * @param screenIndex Индекс текущего отображаемого экрана.
+ */
 void fbdDoStepEx(tSignal period, short screenIndex)
 {
     DESCR_MEM tScreen DESCR_MEM_SUFX *screen;
@@ -729,6 +884,12 @@ void fbdDoStepEx(tSignal period, short screenIndex)
 }
 #endif // USE_HMI
 
+/**
+ * @brief Выполнение одного шага вычисления схемы
+ * Функция выполняет один шаг вычисления схемы
+ * 
+ * @param period время с момента предыдущего вызова fbdDoStep(), например в милисекундах
+ */
 void fbdDoStep(tSignal period)
 {
     tSignal value, param;
@@ -740,11 +901,11 @@ void fbdDoStep(tSignal period)
         unsigned char element = fbdDescrBuf[index] & ELEMMASK;
         switch(element) {
             // элементы с таймером
-            case 12:                                                        // timer TON
-            case 17:                                                        // PID
-            case 18:                                                        // SUM
-            case 24:                                                        // timer TP
-            case 32:                                                        // GEN
+            case ELEM_TON:                                                  // timer TON
+            case ELEM_PID:                                                  // PID
+            case ELEM_SUM:                                                  // SUM
+            case ELEM_TP:                                                   // timer TP
+            case ELEM_GEN:                                                  // GEN
                 value = FBDGETSTORAGE(index, 0);
                 if(value) {
                     value -= period;
@@ -752,14 +913,15 @@ void fbdDoStep(tSignal period)
                     fbdSetStorage(index, 0, value);
                 }
                 break;
-            case 0:                                                         // output PIN
+            case ELEM_OUT_PIN:                                              // output PIN
                 fbdCalcElement(index);
                 param = FBDGETPARAMETER(index, 0);
                 FBDsetProc(0, param, &fbdMemoryBuf[index]);                 // установка значения выходного контакта
                 break;
-            case 14:                                                        // output VAR
+            case ELEM_OUT_VAR:                                              // выходная переменная
+            case ELEM_OUT_MDBS:                                             // запись Modbus
 #ifdef USE_HMI
-            case 22:                                                        // точка контроля
+            case ELEM_WP:                                                   // точка контроля
 #endif // USE_HMI
                 fbdCalcElement(index);
                 break;
@@ -767,14 +929,20 @@ void fbdDoStep(tSignal period)
     }
     fbdFirstFlag = 0;
 }
+
 // -------------------------------------------------------------------------------------------------------
-// установить значение переменной, принятое по сети
+
+/**
+ * @brief Установить принятое по сети значение переменной
+ * 
+ * @param netvar Указатель на структуру описания сетевой переменной
+ */
 void fbdSetNetVar(tNetVar *netvar)
 {
     tElemIndex i;
     //
     for(i=0; i < fbdElementsCount; i++) {
-        if(fbdDescrBuf[i] == 16) {
+        if(fbdDescrBuf[i] == ELEM_INP_VAR) {
             if(FBDGETPARAMETER(i, 0) == netvar->index) {
                 fbdSetStorage(i, 0, netvar->value);
                 return;
@@ -783,15 +951,22 @@ void fbdSetNetVar(tNetVar *netvar)
     }
     return;
 }
-// -------------------------------------------------------------------------------------------------------
-// получить значение переменной для отправки по сети
+
+/**
+ * @brief Получить значение переменной для отправки по сети
+ * Функцию необходимо вызывать до тех пор, пока она не вернет false.
+ * 
+ * @param netvar Указатель на структуру описания сетевой переменной
+ * @return true Переменная для отправки есть, она помещена в структуру netvar
+ * @return false Переменных для отправки больше нет
+ */
 bool fbdGetNetVar(tNetVar *netvar)
 {
     tElemIndex i, varindex;
     //
     varindex = 0;
     for(i=0; i < fbdElementsCount; i++) {
-        if(fbdDescrBuf[i] == 14) {
+        if(fbdDescrBuf[i] == ELEM_OUT_VAR) {
             // проверяем установку флага изменений
             if(fbdChangeVarBuf[varindex>>3]&(1u<<(varindex&7))) {
                 // флаг установлен, сбрасываем его
@@ -806,13 +981,178 @@ bool fbdGetNetVar(tNetVar *netvar)
     }
     return false;
 }
-// -------------------------------------------------------------------------------------------------------
-// установить для всех выходных сетевых переменных признак изменения
+
+/**
+ * @brief Установить для всех выходных сетевых переменных признак изменения
+ * Функцию можно вызывать периодически для принудительной отправки всех переменных.
+ */
 void fbdChangeAllNetVars(void)
 {
     if(fbdChangeVarByteCount > 0) memset(fbdChangeVarBuf, 255, fbdChangeVarByteCount);
 }
-//
+
+/**
+ * @brief Получение статуса использования Modbus схемой
+ * 
+ * @return tFBD_MODBUS_USAGE Статус использования Modbus
+ */
+tFBD_MODBUS_USAGE fbdModbusUsage(void)
+{
+    tFBD_MODBUS_USAGE modbusUsage = FBD_MODBUS_NONE;
+    //
+    if(fbdModbusRTUCount) modbusUsage |= FBD_MODBUS_RTU;
+    if(fbdModbusTCPCount) modbusUsage |= FBD_MODBUS_TCP;
+    //
+    return modbusUsage;
+}
+
+/**
+ * @brief Получение значений настроек Modbus RTU.
+ * Возвращает набор настроек последовательного порта RS485 для использования обмена по протоколу Modbus RTU
+ * 
+ * @param pnt Указатель на структуру описания настроек
+ * @return true Необходимо применить возвращённый набор настроек
+ * @return false Необходимо оставить текущие настройки контроллера
+ */
+bool fbdModbusGetSerialSettings(tModbusRTUsettings *pnt)
+{
+    // проверка количества элементов работы с ModbusRTU
+    if(!fbdModbusRTUCount) return false;
+    //
+    tSignal serialSettings = FBD_MODBUSRTU_OPT;
+    // проверка бита необходимости установки настроек
+    if(!(serialSettings & 0x80000000)) return false;
+    // результат положительный
+    if(!pnt) return true;
+    // заполняем структуру
+    pnt->timeout = serialSettings & 0x0fff;
+    pnt->baudRate = (tFBD_BAUDRATE)((serialSettings >> 12) & 15);
+    pnt->parity = (tFBD_PARITY)((serialSettings >> 16) & 3);
+    pnt->stopBits = (tFBD_STOPB)((serialSettings >> 18) & 1);
+    //
+    return true;
+}
+
+/**
+ * @brief Получение следующего запроса Modbus RTU для выполнения.
+ * 
+ * @param mbrequest Указатель на структуру описания запроса Modbus RTU
+ * @return true Возвращён очередной запрос Modbus RTU
+ * @return false Запросов Modbus RTU пока больше нет
+ */
+bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
+{
+    if(!fbdModbusRTUCount) return false;
+    // поиск следующего элемента Modbus RTU
+    tElemIndex index, i;
+    unsigned char elem;
+    // поиск следующего элемента
+    index = fbdModbusRTUIndex;
+    for(i=0; i < fbdElementsCount; i++) {
+        // переходим к следующему элементу
+        index++;
+        if(index >= fbdElementsCount) index = 0;
+        elem = fbdDescrBuf[index] & ELEMMASK;
+        if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
+            // проверяем тип Modbus
+            if(!FBDGETPARAMETER(index, 0)) {
+                // это Modbus RTU
+                if(elem == ELEM_OUT_MDBS) {
+                    // если это элемент записи, то проверяем флаг изменений
+                    // если флаг не установлен, то переходим к следующему элементу
+                    // если установлен, то формируем команду записи
+                    if(!getAndClearChangeModbusFlag(index)) continue;
+                }
+                // нашли подходящий элемент
+                fbdModbusRTUIndex = index;
+                fillModbusRequest(index, mbrequest);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * @brief Установка результата успешного выполнения запроса Modbus RTU.
+ * Должна быть вызвана после успешного выполнения запроса чтения или записи Modbus RTU.
+ * @param response Данные, возвращённые запросом
+ */
+void fbdSetModbusRTUResponse(tSignal response)
+{
+    setModbusResponse(fbdModbusRTUIndex, response);
+}
+
+/**
+ * @brief Установить признак неуспешного результата выполнения запроса ModBus RTU.
+ * Устанавливается признак неуспешного чтения или записи Modbus для ранее полученного описания запроса.
+ * Должна вызываться при любой ошибке: нет ответа, ошибка CRC, получение кода исключения и т.п.
+ */
+void fbdSetModbusRTUNoResponse(void)
+{
+    setModbusNoResponse(fbdModbusRTUIndex);
+}
+
+/**
+ * @brief Получение следующего запроса Modbus TCP для выполнения.
+ * 
+ * @param mbrequest Указатель на структуру описания запроса Modbus TCP
+ * @return true Возвращён очередной запрос Modbus TCP
+ * @return false Запросов Modbus TCP пока больше нет
+ */
+bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest)
+{
+    if(!fbdModbusTCPCount) return false;
+    // поиск следующего элемента Modbus TCP
+    tElemIndex index, i;
+    unsigned char elem;
+    // поиск следующего элемента
+    index = fbdModbusTCPIndex;
+    for(i=0; i < fbdElementsCount; i++) {
+        // переходим к следующему элементу
+        index++;
+        if(index >= fbdElementsCount) index = 0;
+        elem = fbdDescrBuf[index] & ELEMMASK;
+        if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
+            // проверяем тип Modbus
+            if(FBDGETPARAMETER(index, 0)) {
+                // это Modbus TCP
+                if(elem == ELEM_OUT_MDBS) {
+                    // если это элемент записи, то проверяем флаг изменений
+                    // если флаг не установлен, то переходим к следующему элементу
+                    // если установлен, то формируем команду записи
+                    if(!getAndClearChangeModbusFlag(index)) continue;
+                }
+                // нашли подходящий элемент
+                fbdModbusTCPIndex = index;
+                fillModbusRequest(index, mbrequest);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * @brief Установка результата успешного выполнения запроса Modbus TCP.
+ * Должна быть вызвана после успешного выполнения запроса чтения или записи Modbus TCP.
+ * 
+ * @param response Данные, возвращённые запросом
+ */
+void fbdSetModbusTCPResponse(tSignal response)
+{
+    setModbusResponse(fbdModbusTCPIndex, response);
+}
+
+/**
+ * @brief Установить признак неуспешного результата выполнения запроса ModBus TCP.
+ * Устанавливается признак неуспешного чтения или записи Modbus для ранее полученного описания запроса.
+ */
+void fbdSetModbusTCPNoResponse(void)
+{
+    setModbusNoResponse(fbdModbusTCPIndex);
+}
+
 #ifdef USE_HMI
 #ifndef SPEED_OPT
 // -------------------------------------------------------------------------------------------------------
@@ -843,7 +1183,7 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     elemIndex = (spOffsets + index)->index;
     pnt->caption = (spOffsets + index)->caption;
 #else
-    if(!fbdGetElementIndex(index, 23, &elemIndex)) return false;
+    if(!fbdGetElementIndex(index, ELEM_SP, &elemIndex)) return false;
     pnt->caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
     pnt->value = FBDGETSTORAGE(elemIndex, 0);
@@ -863,7 +1203,7 @@ void fbdHMIsetSP(tSignal index, tSignal value)
 #ifdef SPEED_OPT
     elemIndex = (spOffsets + index)->index;
 #else
-    if(!fbdGetElementIndex(index, 23, &elemIndex)) return;
+    if(!fbdGetElementIndex(index, ELEM_SP, &elemIndex)) return;
 #endif // SPEED_OPT
     fbdSetStorage(elemIndex, 0, value);
 }
@@ -877,7 +1217,7 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
     elemIndex = (wpOffsets + index)->index;
     pnt->caption = (wpOffsets + index)->caption;
 #else
-    if(!fbdGetElementIndex(index, 22, &elemIndex)) return false;
+    if(!fbdGetElementIndex(index, ELEM_WP, &elemIndex)) return false;
     pnt->caption = fbdGetCaption(elemIndex);
 #endif // SPEED_OPT
     pnt->value = fbdMemoryBuf[elemIndex];
@@ -885,7 +1225,12 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
     return true;
 }
 // -------------------------------------------------------------------------------------------------------
-// получить структуру с описанием проекта
+
+/**
+ * @brief Получение структуры с описанием проекта
+ * 
+ * @param pnt Указатель на структуру описания проекта
+ */
 void fbdHMIgetDescription(tHMIdescription *pnt)
 {
 #ifdef SPEED_OPT
@@ -898,9 +1243,15 @@ void fbdHMIgetDescription(tHMIdescription *pnt)
     pnt->btime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2);
 #endif
 }
-// -------------------------------------------------------------------------------------------------------
-// возвращает указатель на текстовое описание (хинт) входа или выхода,
-// если такого описание не найдено, то возвращает NULL
+
+/**
+ * @brief Получение указателя на текстовое описание (хинт) входа или выхода.
+ * Возвращает указатель на текстовое описание (хинт) входа или выхода, если такого описание не найдено, то возвращает NULL.
+ * Значение параметра index соответствует значению параметра index функций FBDgetProc(type, index) и FBDsetProc(type, index, *value).
+ * @param type Тип: 0 - входы, 1 - выходы.
+ * @param index Индекс входа или выхода
+ * @return DESCR_MEM* Указатель на текстовое описание входа или выхода
+ */
 DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index)
 {
     tSignal hintsCount = FBD_HINTS_COUNT;
@@ -942,8 +1293,8 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
     captionIndex = 0;
     while(index < elemIndex) {
         switch(fbdDescrBuf[index++] & ELEMMASK) {
-            case 22:
-            case 23:
+            case ELEM_WP:
+            case ELEM_SP:
                 captionIndex++;
                 break;
         }
@@ -974,7 +1325,7 @@ void fbdCalcElement(tElemIndex curIndex)
     inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
     //
     do {
-        // если у текущего элемента еще есть входы
+        // если у текущего элемента ещё есть входы
         if(curInput < inputCount) {
             // и этот вход еще не расчитан
             inpIndex = ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput + curInput]);
@@ -1008,60 +1359,68 @@ void fbdCalcElement(tElemIndex curIndex)
                 case 1:
                     s1 = fbdMemoryBuf[ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput])];
             }
+            //
             // вычисляем значение текущего элемента, результат в s1
+            //
             switch(fbdDescrBuf[curIndex] & ELEMMASK) {
-                case 0:                                                                 // OUTPUT PIN
-                case 22:                                                                // HMI watchpoint
+                case ELEM_OUT_PIN:                                                      // OUTPUT PIN
+                case ELEM_WP:                                                           // HMI watchpoint
                     break;
-                case 14:                                                                // OUTPUT VAR
+                case ELEM_OUT_VAR:                                                      // OUTPUT VAR
                     // при изменении значения сигнала ставим флаг
                     if(fbdMemoryBuf[curIndex] != s1) {
                         setChangeVarFlag(curIndex);
                     }
                     break;
-                case 1:                                                                 // CONST
+                case ELEM_OUT_MDBS:                                                     // ELEM_OUT_MDBS
+                    // при изменении значения сигнала ставим флаг
+                    if(fbdMemoryBuf[curIndex] != s1) {
+                        setChangeModbusFlag(curIndex);
+                    }
+                    break;
+                case ELEM_CONST:                                                        // CONST
                     s1 = FBDGETPARAMETER(curIndex, 0);
                     break;
-                case 2:                                                                 // NOT
+                case ELEM_NOT:                                                          // NOT
                     s1 = s1?0:1;
                     break;
-                case 3:                                                                 // AND
+                case ELEM_AND:                                                          // AND
                     s1 = s1 && s2;
                     break;
-                case 4:                                                                 // OR
+                case ELEM_OR:                                                           // OR
                     s1 = s1 || s2;
                     break;
-                case 5:                                                                 // XOR
+                case ELEM_XOR:                                                          // XOR
                     s1 = (s1?1:0)^(s2?1:0);
                     break;
-                case 6:                                                                 // RSTRG
+                case ELEM_RSTRG:                                                        // RSTRG
                     if(s1||s2) {
                         s1 = s1?0:1;
                         fbdSetStorage(curIndex, 0, s1);
                     } else s1 = FBDGETSTORAGE(curIndex, 0);
                     break;
-                case 7:                                                                 // DTRG
+                case ELEM_DTRG:                                                         // DTRG
                     // смотрим установку флага фронта на входе "С"
                     if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1])))
                         fbdSetStorage(curIndex, 0, s1);
                     else
                         s1 = FBDGETSTORAGE(curIndex, 0);
                     break;
-                case 8:                                                                 // ADD
+                case ELEM_ADD:                                                          // ADD
                     s1 += s2;
                     break;
-                case 9:                                                                 // SUB
+                case ELEM_SUB:                                                          // SUB
                     s1 -= s2;
                     break;
-                case 10:                                                                // MUL
+                case ELEM_MUL:                                                          // MUL
                     s1 *= s2;
                     break;
-                case 11:                                                                // DIV
+                case ELEM_DIV:                                                          // DIV
                     if(!s2) {
                         if(s1 > 0) s1 = MAX_SIGNAL; else if(s1 < 0) s1 = MIN_SIGNAL; else s1 = 1;
                     } else s1 /= s2;
                     break;
-                case 12:                                                                // TIMER TON
+                case ELEM_TON:                                                          // TIMER TON
                     // s1 - D
                     // s2 - T
                     if(s1) {
@@ -1071,16 +1430,20 @@ void fbdCalcElement(tElemIndex curIndex)
                         s1 = 0;
                     }
                     break;
-                case 13:                                                                // CMP
+                case ELEM_CMP:                                                          // CMP
                     s1 = s1 > s2;
                     break;
-                case 15:
+                case ELEM_INP_PIN:
                     s1 = FBDgetProc(0, FBDGETPARAMETER(curIndex, 0));                   // INPUT PIN
                     break;
-                case 16:
+                case ELEM_INP_VAR:
                     s1 = FBDGETSTORAGE(curIndex, 0);                                    // INPUT VAR
                     break;
-                case 17:                                                                // PID
+                case ELEM_INP_MDBS:
+                    // просто последнее значение
+                    s1 = fbdMemoryBuf[curIndex];                                        // ELEM_INP_MDBS
+                    break;
+                case ELEM_PID:                                                          // PID
                     if(!FBDGETSTORAGE(curIndex, 0)) {           // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s3);         // установка таймера
                         s2 = s1 - s2;                           // ошибка PID
@@ -1095,7 +1458,7 @@ void fbdCalcElement(tElemIndex curIndex)
                         } else s1 = fbdMemoryBuf[curIndex];
                     } else s1 = fbdMemoryBuf[curIndex];
                     break;
-                case 18:                                                                // SUM
+                case ELEM_SUM:                                                          // SUM
                     if(!FBDGETSTORAGE(curIndex, 0)) {       // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s2);     // установка таймера
                         //
@@ -1104,7 +1467,7 @@ void fbdCalcElement(tElemIndex curIndex)
                         if(s1 > 0) { if(s1 > s3) s1 = s3; } else { if(s1 < -s3) s1 = -s3; }
                     } else s1 = fbdMemoryBuf[curIndex];
                     break;
-                case 19:                                                                // Counter
+                case ELEM_COUNTER:                                                      // Counter
                     if(s3) s1 = 0; else {
                         s1 = FBDGETSTORAGE(curIndex, 0);
                         if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput]))) s1++;
@@ -1112,21 +1475,21 @@ void fbdCalcElement(tElemIndex curIndex)
                     }
                     fbdSetStorage(curIndex, 0, s1);
                     break;
-                case 20:                                                                // MUX
+                case ELEM_MUX:                                                          // MUX
                     v &= 3;
                     if(v==1) s1 = s2; else
                     if(v==2) s1 = s3; else
                     if(v==3) s1 = s4;
                     break;
-                case 21:                                                                // ABS
+                case ELEM_ABS:                                                          // ABS
                     if(s1 < 0) s1 = -s1;
                     break;
-                case 23:                                                                // HMI setpoint
+                case ELEM_SP:                                                           // HMI setpoint
 #ifdef USE_HMI
                     s1 = FBDGETSTORAGE(curIndex, 0);
 #endif // USE_HMI
                     break;
-                case 24:                                                                // TIMER TP
+                case ELEM_TP:                                                           // TIMER TP
                     // s1 - D
                     // s2 - T
                     if(FBDGETSTORAGE(curIndex, 0)) {
@@ -1138,28 +1501,28 @@ void fbdCalcElement(tElemIndex curIndex)
                         } else s1 = 0;
                     }
                     break;
-                case 25:                                                                // MIN
+                case ELEM_MIN:                                                          // MIN
                     if(s2 < s1) s1 = s2;
                     break;
-                case 26:                                                                // MAX
+                case ELEM_MAX:                                                          // MAX
                     if(s2 > s1) s1 = s2;
                     break;
-                case 27:                                                                // LIM
+                case ELEM_LIM:                                                          // LIM
                     if(s1 > s2) s1 = s2; else if(s1 < s3) s1 = s3;
                     break;
-                case 28:                                                                // EQ
+                case ELEM_EQ:                                                           // EQ
                     s1 = s1 == s2;
                     break;
-                case 29:                                                                // побитный AND
+                case ELEM_BAND:                                                         // побитный AND
                     s1 = s1 & s2;
                     break;
-                case 30:                                                                // побитный OR
+                case ELEM_BOR:                                                          // побитный OR
                     s1 = s1 | s2;
                     break;
-                case 31:                                                                // побитный XOR
+                case ELEM_BXOR:                                                         // побитный XOR
                     s1 = s1 ^ s2;
                     break;
-                case 32:                                                                // генератор
+                case ELEM_GEN:                                                          // генератор
                     if(s1 > 0) {                                        // s1 - enable, период; s2 - амплитуда
                         s3 = FBDGETSTORAGE(curIndex, 0);                // s3 - остаток таймера периода
                         if(s3) {
@@ -1268,15 +1631,325 @@ void setChangeVarFlag(tElemIndex index)
     tElemIndex varIndex = 0;
     // определяем номер флага
     while(index--) {
-        if((fbdDescrBuf[index] & ELEMMASK) == 14) varIndex++;
+        if((fbdDescrBuf[index] & ELEMMASK) == ELEM_OUT_VAR) varIndex++;
     }
     fbdChangeVarBuf[varIndex>>3] |= 1u<<(varIndex&7);
 }
-// -------------------------------------------------------------------------------------------------------
-// расчет абсолютного значения сигнала
+
+/**
+ * @brief Установка флага изменения значение Modbus
+ * 
+ * @param index Индекс элемента записи Modbus
+ */
+void setChangeModbusFlag(tElemIndex index)
+{
+    tElemIndex varIndex = 0;
+    // определяем номер флага
+    while(index--) {
+        if((fbdDescrBuf[index] & ELEMMASK) == ELEM_OUT_MDBS) varIndex++;
+    }
+    fbdChangeModbusBuf[varIndex>>3] |= 1u<<(varIndex&7);
+}
+
+/**
+ * @brief Возвращает и сбрасыввет, если он установлен, флаг изменения значения записи в Modbus
+ * 
+ * @param index Индекс элемента записи Modbus
+ * @return true Флаг установлен и был сброшен
+ * @return false Флаг сброшен
+ */
+bool getAndClearChangeModbusFlag(tElemIndex index)
+{
+    tElemIndex varIndex = 0;
+    // определяем номер флага
+    while(index--) {
+        if((fbdDescrBuf[index] & ELEMMASK) == ELEM_OUT_MDBS) varIndex++;
+    }
+    if(fbdChangeVarBuf[varIndex >> 3]&(1u << (varIndex & 7))) {
+        // флаг установлен, сбрасываем
+        fbdChangeVarBuf[varIndex>>3] &= ~(1u<<(varIndex&7));
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/**
+ * @brief Установка признака "нет ответа" для элемента чтения или записи Modbus
+ * @param index Индекс элемента чтения или записи Modbus
+ */
+void setModbusNoResponse(tElemIndex index)
+{
+    if(index == MAX_INDEX) return;
+    //
+    switch (fbdDescrBuf[index] & ELEMMASK) {
+        case ELEM_INP_MDBS:
+            // ошибка чтения Modbus, устанавливаем значение по умолчанию
+            fbdMemoryBuf[index] = FBDGETPARAMETER(index, 2);
+            break;
+        case ELEM_OUT_MDBS:
+            // ошибка записи Modbus, устанавливаем флаг необходимости повторной записи
+            setChangeModbusFlag(index);
+            break;
+    }
+}
+
+/**
+ * @brief Разбор и установка принятых по Modbus данных
+ * 
+ * @param index Индекс элемента чтения или записи Modbus
+ * @param response Принятые данные
+ */
+void setModbusResponse(tElemIndex index, tSignal response)
+{
+    tSignal options;
+    tModbusData data;
+    unsigned char fmtcnt;
+    //
+    if(index == MAX_INDEX) return;
+    // если это не элемент чтения Modbus, то ничего не далаем
+    // для элементов записи Modbus флаг изменений сбрасывается при формировании запроса
+    if((fbdDescrBuf[index] & ELEMMASK) != ELEM_INP_MDBS) return;
+    // чтение выполнено успешно
+    options = FBDGETPARAMETER(index, 1);
+    fmtcnt = (options >> 28) & 15;
+    //
+    switch ((options >> 24) & 3) {
+        case 0:
+        case 1:
+            // FBD_MODBUS_READ_COILS
+            // FBD_MODBUS_READ_DISCRETE_INPUTS
+            fmtcnt++;
+            if(options & FBD_MODBUS_OPT_WO) fmtcnt += 16;
+            // обнуляем ненужные биты
+            fbdMemoryBuf[index] = response & getCoilBitsMask(fmtcnt);
+            //
+            break;
+        case 2:
+        case 3:
+            // FBD_MODBUS_READ_HOLDING_REGISTERS
+            // FBD_MODBUS_READ_INPUT_REGISTERS
+            data.intData = response;
+            // изменение порядка байт
+            if(!(options & FBD_MODBUS_OPT_BO)) swapModbusByteOrder(&data);
+            //
+            switch (fmtcnt & 3) {
+                case 0:
+                    // uint16 (0..65535) 1 регистр
+                    fbdMemoryBuf[index] = data.ushortData[0];
+                    //
+                    break;
+                case 1:
+                    // int16 (0..65535)  1 регистр
+                    fbdMemoryBuf[index] = data.shortData[0];
+                    //
+                    break;
+                case 2:
+                    // int32             2 регистра
+                    // изменение порядка слов
+                    if(!(options & FBD_MODBUS_OPT_WO)) swapModbusWordOrder(&data);
+                    fbdMemoryBuf[index] = data.intData;
+                    //
+                    break;
+                case 3:
+                    // single            2 регистра, MM - множитель 00 - 1, 01 - 10, 10 - 100, 11 - 1000
+                    // изменение порядка слов
+                    if(!(options & FBD_MODBUS_OPT_WO)) swapModbusWordOrder(&data);
+                    // множитель
+                    switch ((fmtcnt >> 2) & 3) {
+                        case 0:
+                            fbdMemoryBuf[index] = roundf(data.floatData);
+                            break;
+                        case 1:
+                            fbdMemoryBuf[index] = roundf(data.floatData * (float)10.0);
+                            break;
+                        case 2:
+                            fbdMemoryBuf[index] = roundf(data.floatData * (float)100.0);
+                            break;
+                        case 3:
+                            fbdMemoryBuf[index] = roundf(data.floatData * (float)1000.0);
+                            break;
+                    }
+                    break;
+            }
+    }
+}
+
+/**
+ * @brief Заполнение структуры запроса Modbus
+ *
+ * @param index Индекс элемента чтения или записи Modbus
+ * @param mbrequest Указатель на структуру запроса Modbus
+ */
+void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest)
+{
+    unsigned char fmtcnt;
+    tSignal options = FBDGETPARAMETER(index, 1);
+    //
+    mbrequest->ip = FBDGETPARAMETER(index, 0);
+    mbrequest->regAddr = options & 0x0000ffff;
+    mbrequest->slaveAddr = (options >> 16) & 0xff;
+    fmtcnt = (options >> 28) & 15;
+    //
+    if((fbdDescrBuf[index] & ELEMMASK) == ELEM_INP_MDBS) {
+        // чтение Modbus
+        switch ((options >> 24) & 3) {
+            case 0:
+                mbrequest->funcCode = FBD_MODBUS_READ_COILS;
+                mbrequest->regCount = fmtcnt + 1;
+                if(options & FBD_MODBUS_OPT_WO) mbrequest->regCount += 16;
+                break;
+            case 1:
+                mbrequest->funcCode = FBD_MODBUS_READ_DISCRETE_INPUTS;
+                mbrequest->regCount = fmtcnt + 1;
+                if(options & FBD_MODBUS_OPT_WO) mbrequest->regCount += 16;
+                break;
+            case 2:
+                mbrequest->funcCode = FBD_MODBUS_READ_HOLDING_REGISTERS;
+                // FMT  - формат читаемых данных (для "read input registers" и "read holding registers"):
+                //  0000    - uint16 (0..65535) 1 регистр
+                //  0001    - int16 (0..65535)  1 регистр
+                //  0010    - int32             2 регистра
+                //  MM11    - single            2 регистра, MM - множитель 00 - 1, 01 - 10, 10 - 100, 11 - 1000
+                mbrequest->regCount = (fmtcnt & 2)?2:1;
+                break;
+            case 3:
+                mbrequest->funcCode = FBD_MODBUS_READ_INPUT_REGISTERS;
+                mbrequest->regCount = (fmtcnt & 2)?2:1;
+                break;
+        }
+    } else {
+        // запись Modbus
+        switch ((options >> 24) & 3) {
+            case 0:
+                // FBD_MODBUS_WRITE_SINGLE_COIL
+                mbrequest->funcCode = FBD_MODBUS_WRITE_SINGLE_COIL;
+                mbrequest->regCount = 1;
+                mbrequest->data.intData = fbdMemoryBuf[index]?0x00ff:0;
+                break;
+            case 1:
+                // FBD_MODBUS_WRITE_MULTIPLE_COILS
+                mbrequest->funcCode = FBD_MODBUS_WRITE_MULTIPLE_COILS;
+                mbrequest->regCount = fmtcnt + 1;
+                if(options & FBD_MODBUS_OPT_WO) mbrequest->regCount += 16;
+                mbrequest->data.intData = fbdMemoryBuf[index];
+                break;
+            case 2:
+                // FBD_MODBUS_WRITE_SINGLE_REGISTER
+                mbrequest->funcCode = FBD_MODBUS_WRITE_SINGLE_REGISTER;
+                mbrequest->regCount = 1;
+                mbrequest->data.intData = fbdMemoryBuf[index];
+                if(!(options & FBD_MODBUS_OPT_BO)) swapModbusByteOrder(&mbrequest->data);
+                break;
+            case 3:
+                mbrequest->funcCode = FBD_MODBUS_WRITE_MULTIPLE_REGISTERS;
+                // FBD_MODBUS_WRITE_MULTIPLE_REGISTERS
+                // формат данных
+                switch (fmtcnt & 3) {
+                    case 0:
+                    case 1:
+                        // UINT16, INT16
+                        mbrequest->regCount = 1;
+                        mbrequest->data.intData = fbdMemoryBuf[index];
+                        // порядок байт
+                        if(!(options & FBD_MODBUS_OPT_BO)) swapModbusByteOrder(&mbrequest->data);
+                        //
+                        break;
+                    case 2:
+                        // INT32
+                        mbrequest->regCount = 2;
+                        mbrequest->data.intData = fbdMemoryBuf[index];
+                        // порядок байт и слов
+                        if(!(options & FBD_MODBUS_OPT_BO)) swapModbusByteOrder(&mbrequest->data);
+                        if(!(options & FBD_MODBUS_OPT_WO)) swapModbusWordOrder(&mbrequest->data);
+                        //
+                        break;
+                    case 3:
+                        // float
+                        mbrequest->regCount = 2;
+                        // приведение к типу single precission float
+                        mbrequest->data.floatData = fbdMemoryBuf[index];
+                        // делитель
+                        switch ((fmtcnt >> 2) & 3) {
+                            case 0:
+                                // mbrequest->data.floatData /= 1;
+                                break;
+                            case 1:
+                                mbrequest->data.floatData /= (float)10.0;
+                                break;
+                            case 2:
+                                mbrequest->data.floatData /= (float)100.0;
+                                break;
+                            case 3:
+                                mbrequest->data.floatData /= (float)1000.0;
+                                break;
+                        }
+                        // порядок байт и слов
+                        if(!(options & FBD_MODBUS_OPT_BO)) swapModbusByteOrder(&mbrequest->data);
+                        if(!(options & FBD_MODBUS_OPT_WO)) swapModbusWordOrder(&mbrequest->data);
+                        //
+                        break;
+                }
+                //
+                break;
+        }
+    }
+}
+
+/**
+ * @brief Меняет порядок байтов в данных Modbus
+ * @param data Указатель на данные
+ */
+void swapModbusByteOrder(tModbusData *data)
+{
+    unsigned char t;
+    //
+    t = (*data).byteData[0];
+    (*data).byteData[0] = (*data).byteData[1];
+    (*data).byteData[1] = t;
+    //
+    t = (*data).byteData[2];
+    (*data).byteData[2] = (*data).byteData[3];
+    (*data).byteData[3] = t;
+}
+
+/**
+ * @brief Меняет порядок слов в данных Modbus
+ * @param data Указатель на данные
+ */
+void swapModbusWordOrder(tModbusData *data)
+{
+    unsigned short t;
+    //
+    t = (*data).ushortData[0];
+    (*data).ushortData[0] = (*data).ushortData[1];
+    (*data).ushortData[1] = t;
+}
+
+/**
+ * @brief Вычисление абсолютного значения сигнала
+ * 
+ * @param val Значение сигнала
+ * @return tSignal Абсолютное значение сигнала
+ */
 inline tSignal intAbs(tSignal val)
 {
     return (val>=0)?val:-val;
+}
+
+/**
+ * @brief Возвращает значение у кторого установлены count младших бит.
+ * 
+ * @param count Количество бит
+ * @return unsigned long int Результат
+ */
+unsigned long int getCoilBitsMask(unsigned count)
+{
+    if(count < 32) {
+        return (1 << count) - 1;
+    } else {
+        return 0xffffffff;
+    }
 }
 
 #if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)

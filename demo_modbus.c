@@ -13,7 +13,7 @@ const unsigned char description[] = {0x16, 0x0F, 0x94, 0x01, 0x00, 0x01, 0x00, 0
  0x73, 0x20, 0x69, 0x73, 0x20, 0x74, 0x65, 0x6D, 0x70, 0x65, 0x72, 0x61, 0x74, 0x75, 0x72, 0x65, 0x20, 0x31, 0x00, 0x01, 0x01, 0x6F, 0x75, 0x74, 0x70, 0x75, 0x74, 0x32, 0x00, 0x01, 0x02, 0x6F, 
  0x75, 0x74, 0x70, 0x75, 0x74, 0x33, 0x00, 0x01, 0x0B, 0x61, 0x6F, 0x31, 0x00, 0x4C, 0x92, 0x49, 0x9B};
 
-#define MEM_SIZE 1024
+#define MEM_SIZE 2048
 
 char memory[MEM_SIZE];
 
@@ -109,16 +109,11 @@ void FBDdrawEnd(void)
 {
     printf("draw end -------------------------------------\n");
 }
-
 #endif
-
 
 int main(void)
 {
-
     int res,i;
-
-    // DWORD start, end;
     //
     res = fbdInit(description);
     if(res <= 0) {
@@ -140,9 +135,10 @@ int main(void)
     printf("FBD_SCREEN_COUNT: %ld\n",       FBD_SCREEN_COUNT);
     printf("FBD_SCHEMA_SIZE: %ld\n",        FBD_SCHEMA_SIZE);
     printf("FBD_HINTS_COUNT: %ld\n",        FBD_HINTS_COUNT);
+    //
+    printf("fbdModbusUsage(void): %d\n",        fbdModbusUsage());
 
     // main loop
-    // start = GetTickCount();
 
     printf("IO hints:\n");
     for(i=0; i<16; i++) {
@@ -157,17 +153,9 @@ int main(void)
 #ifndef SILENT
         printf("step %d\n", i);
 #endif
-
         fbdDoStepEx(100, 0);
         msleep(10);
-
     }
-
-    // end = GetTickCount();
-    // printf("%lu ms\n", end-start);
-    // printf("cicle duration %f ms\n", 1.0*(end-start)/CICLCOUNT);
-
-
-
+    //
     return 0;
 }

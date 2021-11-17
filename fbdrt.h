@@ -1,3 +1,11 @@
+/**
+ * @file fbdrt.h
+ * @author crossrw1@gmail.com
+ * @brief FBD-Runtime Library Headers
+ * @version 9.0
+ * @date 2021-11-17
+ */
+
 #ifndef FBDRT_H
 #define	FBDRT_H
 
@@ -5,7 +13,8 @@
 
 // 7 - базовая
 // 8 - поддержка экранов
-#define FBD_LIB_VERSION 8
+// 9 - Modbus
+#define FBD_LIB_VERSION 9
 
 // описание упакованной структуры
 #if defined ( __CC_ARM   )
@@ -63,6 +72,50 @@ typedef long tLongSignal;
 // = конец настроек ========================================================
 // =========================================================================
 //
+// типы элементов:
+#define ELEMMASK    0x3F
+#define INVERTFLAG  0x40
+//
+typedef enum {
+    ELEM_OUT_PIN =  0,
+    ELEM_CONST   =  1,
+    ELEM_NOT     =  2,
+    ELEM_AND     =  3,
+    ELEM_OR      =  4,
+    ELEM_XOR     =  5,
+    ELEM_RSTRG   =  6,
+    ELEM_DTRG    =  7,
+    ELEM_ADD     =  8,
+    ELEM_SUB     =  9,
+    ELEM_MUL     =  10,
+    ELEM_DIV     =  11,
+    ELEM_TON     =  12,
+    ELEM_CMP     =  13,
+    ELEM_OUT_VAR =  14,
+    ELEM_INP_PIN =  15,
+    ELEM_INP_VAR =  16,
+    ELEM_PID     =  17,
+    ELEM_SUM     =  18,
+    ELEM_COUNTER =  19,
+    ELEM_MUX     =  20,
+    ELEM_ABS     =  21,
+    ELEM_WP      =  22,
+    ELEM_SP      =  23,
+    ELEM_TP      =  24,
+    ELEM_MIN     =  25,
+    ELEM_MAX     =  26,
+    ELEM_LIM     =  27,
+    ELEM_EQ      =  28,
+    ELEM_BAND    =  29,
+    ELEM_BOR     =  30,
+    ELEM_BXOR    =  31,
+    ELEM_GEN     =  32,
+    ELEM_INP_MDBS=  33,
+    ELEM_OUT_MDBS=  34,
+    //
+    ELEM_TYPE_COUNT
+} tFBD_ELEMENT_TYPE;
+//
 #ifdef USE_MATH
 #include <math.h>
 #ifndef M_PI
@@ -104,8 +157,10 @@ typedef signed long int tSignal;
 //
 #if INDEX_SIZE == 1
 typedef unsigned char tElemIndex;
+#define MAX_INDEX 255
 #elif INDEX_SIZE == 2
 typedef unsigned short tElemIndex;
+#define MAX_INDEX 65535
 #else
 #error Invalid value of INDEX_SIZE
 #endif // INDEX_SIZE
@@ -119,31 +174,23 @@ typedef unsigned short tElemIndex;
 // bit 6:   reserved
 // bit 7:   1
 
+// коды ошибок, возвращаемые fbdInit()
+typedef enum {
+    ERR_INVALID_ELEMENT_TYPE    =   -1,
+    ERR_INVALID_SIZE_TYPE       =   -2,
+    ERR_INVALID_LIB_VERSION     =   -3,
+    ERR_INVALID_CHECK_SUM       =   -4
+} FBD_INIT_RESULT;
+
 // -------------------------------------------------------------------------------------------------------
 // Инициализация схемы
 // -------------------------------------------------------------------------------------------------------
-// Функция должна быть вызвана один раз в самом начале работы.
-// Результат: количество ОЗУ, необходимое для выполнения схемы (значение больше 0) или (в случае ошибки) отрицательное значение:
-// -1 - неверный код элемента в описании схемы
-// -2 - неверный размер tSignal или tElementIndex
-// -3 - несовпадает версия программы и библиотеки
-// -4 - неверная контрольная сумма программы
-int fbdInit(DESCR_MEM unsigned char *descr);
-//
-//
-// Функция должна быть вызвана после fbdInit()
-// Параметры:
-//  buf       - указатель на буфер памяти (размер возвращается fbdInit()), которая будет использована при расчетах
-//  needReset - признак необходимости сбросить nvram после загрузки новой (ранее не выполнявщейся) схемы
-void fbdSetMemory(char *buf, bool needReset);
-//
-// -------------------------------------------------------------------------------------------------------
-// Функция вычисления
-// -------------------------------------------------------------------------------------------------------
-// Функция выполняет один шаг вычисления схемы
-//  period - время с момента предыдущего вызова fbdDoStep(), например в милисекундах
-void fbdDoStep(tSignal period);
 
+int fbdInit(DESCR_MEM unsigned char *descr);
+
+void fbdSetMemory(char *buf, bool needReset);
+
+void fbdDoStep(tSignal period);
 
 // -------------------------------------------------------------------------------------------------------
 // Экраны
@@ -247,18 +294,18 @@ typedef __packed_struct ScrElemGauge_t {
     unsigned short orientation;                                 // ориентация: 0 - гор, 1 - вер     2
 } tScrElemGauge;
 
-
 // один шаг вычисления схемы с последующим рисованием (при необходимости) экрана screen
-// если screen < 0, то не рисовать экран
 void fbdDoStepEx(tSignal period, short screenIndex);
 
-#define GP_RTC_HOUR     20
-#define GP_RTC_MINUTE   21
-#define GP_RTC_SECOND   22
-#define GP_RTC_DAY      23
-#define GP_RTC_MONTH    24
-#define GP_RTC_YEAR     25
-
+// перечисление используется в процедуре отрисовки тектовых сообщений на экране для получения текущего времени
+enum GP_RTC_PARAMS {
+    GP_RTC_HOUR     =  20,
+    GP_RTC_MINUTE   =  21,
+    GP_RTC_SECOND   =  22,
+    GP_RTC_DAY      =  23,
+    GP_RTC_MONTH    =  24,
+    GP_RTC_YEAR     =  25
+};
 #endif
 
 // -------------------------------------------------------------------------------------------------------
@@ -271,44 +318,193 @@ typedef struct netvar_t {
     tSignal value;              // значение сетевой переменной
 } tNetVar;
 //
-
-// Установить значение переменной, принятое по сети
-// параметр - заполненная структура с принятой сетевой переменной
 void fbdSetNetVar(tNetVar *netvar);
 //
-// Получить значение переменной для отправки по сети
-// Результат выполнения:
-//  false - переменных для отправки больше нет
-//  true  - переменная для отправки есть, она помещена в структуру netvar
-// Функцию необходимо вызывать до тех пор, пока она не вернет false
 bool fbdGetNetVar(tNetVar *netvar);
 //
-// установить для всех выходных сетевых переменных признак изменения
-// функцию можно вызывать периодически для принудительной отправки всех переменных
 void fbdChangeAllNetVars(void);
+
+// -------------------------------------------------------------------------------------------------------
+// MODBUS
+// -------------------------------------------------------------------------------------------------------
 //
-// получение значений глобальных настроек схемы
-// параметр:
-#define FBD_OPT_REQ_VERSION  0
-#define FBD_OPT_NETVAR_USE   1
-#define FBD_OPT_NETVAR_PORT  2
-#define FBD_OPT_NETVAR_GROUP 3
-#define FBD_OPT_SCREEN_COUNT 4
-#define FBD_OPT_SCHEMA_SIZE  5
-#define FBD_OPT_HINTS_COUNT  6
+// настройки последовательного порта для Modbus RTU
+//
+// скорость обмена:
+typedef enum {
+    FBD_BR_9600                 = 0,
+    FBD_BR_19200                = 1,
+    FBD_BR_38400                = 2,
+    FBD_BR_57600                = 3,
+    FBD_BR_115200               = 4
+} tFBD_BAUDRATE;
+//
+// контроль чётности:
+typedef enum {
+    FBD_PAR_NONE                = 0,
+    FBD_PAR_ODD                 = 1,
+    FBD_PAR_EVEN                = 2
+} tFBD_PARITY;
+//
+// стоп-биты:
+typedef enum {
+    FBD_SB_1                    = 0,
+    FBD_SB_2                    = 1
+} tFBD_STOPB;
+//
+// статус использования Modbus
+typedef enum {
+    FBD_MODBUS_NONE             = 0,
+    FBD_MODBUS_RTU              = 1,
+    FBD_MODBUS_TCP              = 2,
+    FBD_MODBUS_BOTH             = 3
+} tFBD_MODBUS_USAGE;
+//
+// функция Modbus
+typedef enum {
+    FBD_MODBUS_READ_COILS               = 1,
+    FBD_MODBUS_READ_DISCRETE_INPUTS     = 2,
+    FBD_MODBUS_READ_HOLDING_REGISTERS   = 3,
+    FBD_MODBUS_READ_INPUT_REGISTERS     = 4,
+    //
+    FBD_MODBUS_WRITE_SINGLE_COIL        = 5,
+    FBD_MODBUS_WRITE_SINGLE_REGISTER    = 6,
+    FBD_MODBUS_WRITE_MULTIPLE_COILS     = 15,
+    FBD_MODBUS_WRITE_MULTIPLE_REGISTERS = 16
+} tFBD_MODBUS_FUNCTION;
+
+// структура описания настроек последовательного порта Modbus RTU
+typedef struct modbusrtusettings_t {
+    unsigned int timeout;                   // время одидания ответа в мс (0..4095)
+    tFBD_BAUDRATE baudRate;                 // скорость обмена: 0-9600, 1-19200, 2-38400, 3-57600, 4-115200
+    tFBD_PARITY parity;                     // контроль чётности: 0-None, 1-Odd, 2-Even
+    tFBD_STOPB stopBits;                    // количество стоп-бит: 0-1, 1-2
+} tModbusRTUsettings;
+
+// данные Modbus
+typedef union {
+    tSignal         intData;
+    float           floatData;
+    unsigned short  ushortData[2];
+    short           shortData[2];
+    unsigned char   byteData[4];
+
+} tModbusData;
+
+// структура описания запроса MODBUS
+typedef struct modbusreq_t {
+    tSignal ip;                             // ip адрес устройства, если ==0, то использовать протокол RTU
+    unsigned char slaveAddr;                // адрес устройства
+    tFBD_MODBUS_FUNCTION funcCode;          // код функции
+    unsigned short regAddr;                 // адрес регистра ModBus
+    unsigned short regCount;                // количество регистров
+    tModbusData data;                       // данные, только для запросов записи
+} tModbusReq;
+
+// modbus bytes order
+#define FBD_MODBUS_OPT_BO 0x04000000
+// modbus words order
+#define FBD_MODBUS_OPT_WO 0x08000000
+
+// Получить статус использования Modbus заруженной схемой
+// Вызывать только после выполнения "fbdSetMemory()"
+// Результат выполнения:
+//  FBD_MODBUS_NONE   - Modbus не используется
+//  FBD_MODBUS_RTU    - Используется только Modbus RTU
+//  FBD_MODBUS_TCP    - Используется только Modbus TCP
+//  FBD_MODBUS_BOTH   - Используется только Modbus RTU и TCP
+tFBD_MODBUS_USAGE fbdModbusUsage(void);
+
+// Получить значения настроек Modbus RTU
+// Вызывать только после выполнения "fbdSetMemory()"
+// Результат выполнения:
+//  false - менять настройки последовательного порта не надо (использовать текущие)
+//  true  - необходимо установить значения настроек последовательного порта, настройки помещены в структуру *pnt
+bool fbdModbusGetSerialSettings(tModbusRTUsettings *pnt);
+
+// Modbus RTU
+
+// Получить очередной запрос ModBus RTU для выполнения
+// Результат выполнения:
+//  false - запросов больше нет
+//  true  - запрос есть, он помещен в структуру mbrequest
+bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest);
+//
+// Установка результата успешного выполнения предыдущего запроса Modbus RTU.
+// Функция должна быть вызвана после успешного получения ответа на запрос Modbus RTU.
+// Параметр response - данные возвращённые запросом.
+void fbdSetModbusRTUResponse(tSignal response);
+//
+// Установить признак неуспешного результата полученного ранее запроса ModBus RTU
+// Функция должна быть вызвана после неудачного выполнения запроса Modbus RTU
+void fbdSetModbusRTUNoResponse(void);
+
+// Modbus TCP
+
+// Получить очередной запрос ModBus TCP для выполнения
+// Результат выполнения:
+//  false - запросов больше нет
+//  true  - запрос есть, он помещен в структуру mbrequest
+bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest);
+//
+// Установка результата успешного выполнения предыдущего запроса Modbus TCP.
+// Функция должна быть вызвана после успешного получения ответа на запрос Modbus TCP.
+// Параметр response - данные возвращённые запросом.
+void fbdSetModbusTCPResponse(tSignal response);
+//
+// Установить признак неуспешного результата полученного ранее запроса ModBus TCP
+// Функция должна быть вызвана после неудачного выполнения запроса Modbus TCP
+void fbdSetModbusTCPNoResponse(void);
+
+// -------------------------------------------------------------------------------------------------------
+// Получение значений глобальных настроек схемы
+// -------------------------------------------------------------------------------------------------------
+// 
+enum FBD_OPTIONS {
+    FBD_OPT_REQ_VERSION     = 0,
+    FBD_OPT_NETVAR_USE      = 1,
+    FBD_OPT_NETVAR_PORT     = 2,
+    FBD_OPT_NETVAR_GROUP    = 3,
+    FBD_OPT_SCREEN_COUNT    = 4,
+    FBD_OPT_SCHEMA_SIZE     = 5,
+    FBD_OPT_HINTS_COUNT     = 6,
+    FBD_OPT_MODBUSRTU_OPT   = 7
+};
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
 extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
+#define FBD_REQ_VERSION     fbdGlobalOptions[FBD_OPT_REQ_VERSION]
+#define FBD_NETVAR_USE      fbdGlobalOptions[FBD_OPT_NETVAR_USE]
+#define FBD_NETVAR_PORT     fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
+#define FBD_NETVAR_GROUP    fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
+#define FBD_SCREEN_COUNT    ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
+#define FBD_SCHEMA_SIZE     ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
+#define FBD_HINTS_COUNT     ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
+#define FBD_MODBUSRTU_OPT   ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT]:0)
 
-#define FBD_REQ_VERSION  fbdGlobalOptions[FBD_OPT_REQ_VERSION]
-#define FBD_NETVAR_USE   fbdGlobalOptions[FBD_OPT_NETVAR_USE]
-#define FBD_NETVAR_PORT  fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
-#define FBD_NETVAR_GROUP fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
-#define FBD_SCREEN_COUNT ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
-#define FBD_SCHEMA_SIZE ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
-#define FBD_HINTS_COUNT ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
-
+// FBD_MODBUS_OPT
+// |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |1 |              Reserve              |SB| Par | Baud Rate |           Таймаут ответа          |
 //
+// 00..11: Таймаут ответа - время одидания ответа (0..4095), мс
+// 12..15: Baud Rate:
+//  0000 - 9600
+//  0001 - 19200
+//  0010 - 38400
+//  0011 - 57600
+//  0100 - 115200
+// 16..17: Check Parity:
+//  00   - None
+//  01   - Odd
+//  10   - Even
+// 18: StopBits:
+//  0    - 1
+//  1    - 2
+// 31: 
+//  0    - не менять настройки последовательного порта
+//  1    - менять настройки последовательного порта
+
 #ifdef USE_HMI
 // HMI
 // -------------------------------------------------------------------------------------------------------
@@ -343,13 +539,8 @@ typedef struct hmidescription_t {
 void fbdHMIgetDescription(tHMIdescription *pnt);
 //
 // возвращает указатель на текстовое описание (хинт) входа или выхода, если такого описание не найдено, то возвращает NULL
-// значение type:
-// 0 - входы
-// 1 - выходы
-// значение index соответствует значению параметра index функций FBDgetProc(type, index) и FBDsetProc(type, index, *value)
 DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index);
-
 //
-#endif // USE_HMI
+#endif  // USE_HMI
 
-#endif	// FBDRT_H
+#endif  // FBDRT_H
