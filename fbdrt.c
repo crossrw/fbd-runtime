@@ -112,9 +112,10 @@ bool getAndClearChangeModbusFlag(tElemIndex index);
 void setModbusNoResponse(tElemIndex index);
 void setModbusResponse(tElemIndex index, tSignal response);
 void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest);
+void setModbusFloat(tElemIndex index, float data, float mul);
+unsigned long int getCoilBitsMask(unsigned count);
 void swapModbusByteOrder(tModbusData *data);
 void swapModbusWordOrder(tModbusData *data);
-unsigned long int getCoilBitsMask(unsigned count);
 
 char getCalcFlag(tElemIndex element);
 char getRiseFlag(tElemIndex element);
@@ -1758,16 +1759,16 @@ void setModbusResponse(tElemIndex index, tSignal response)
                     // множитель
                     switch ((fmtcnt >> 2) & 3) {
                         case 0:
-                            fbdMemoryBuf[index] = roundf(data.floatData);
+                            setModbusFloat(index, data.floatData, (float)1.0);
                             break;
                         case 1:
-                            fbdMemoryBuf[index] = roundf(data.floatData * (float)10.0);
+                            setModbusFloat(index, data.floatData, (float)10.0);
                             break;
                         case 2:
-                            fbdMemoryBuf[index] = roundf(data.floatData * (float)100.0);
+                            setModbusFloat(index, data.floatData, (float)100.0);
                             break;
                         case 3:
-                            fbdMemoryBuf[index] = roundf(data.floatData * (float)1000.0);
+                            setModbusFloat(index, data.floatData, (float)1000.0);
                             break;
                     }
                     break;
@@ -1894,6 +1895,28 @@ void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest)
                 break;
         }
     }
+}
+
+/**
+ * @brief Проверка и установка значения чтения Modbus с типом float
+ * 
+ * @param index Индекс элемента чтения Modbus
+ * @param data Новые данные
+ * @param mul Множитель
+ */
+void setModbusFloat(tElemIndex index, float data, float mul)
+{
+    int fpc = fpclassify(data);
+    if((fpc == FP_NORMAL) || (fpc == FP_ZERO)) {
+        data = roundf(data * mul);
+        if((data >= MIN_SIGNAL)&&(data <= MAX_SIGNAL)) {
+            // корректное значение, устанавливаем его
+            fbdMemoryBuf[index] = data;
+            return;
+        }
+    }
+    // значение float некорректно, ставим значение по умолчанию
+    fbdMemoryBuf[index] = FBDGETPARAMETER(index, 2);
 }
 
 /**
