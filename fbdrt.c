@@ -643,7 +643,14 @@ void fbdSetMemory(char *buf, bool needReset)
 
 // -------------------------------------------------------------------------------------------------------
 #ifdef USE_HMI
-// проверка видимости экранного элемента
+
+/**
+ * @brief Проверка видимости экранного элемента
+ * 
+ * @param elem Указатель на описание экранного элемента
+ * @return true Элемент видим
+ * @return false Элемент не видим
+ */
 bool isScrElemVisible(tScrElemBase *elem)
 {
     if(elem->visibleElem == 0xffff) return true;    // не выбран элемент видимости
@@ -687,6 +694,11 @@ void sprintf4d(char *buf, tSignal val)
     *(buf) = val % 10 + '0';
 }
 
+/**
+ * @brief Отрисовка экрана
+ * 
+ * @param screen Указатель на описание экрана
+ */
 void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
 {
     tScrElemBase *elem;
@@ -1173,9 +1185,18 @@ bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex
     return true;
 }
 #endif // SPEED_OPT
-// HMI functions
+
 // -------------------------------------------------------------------------------------------------------
-// получить значение точки регулирования
+// HMI functions
+
+/**
+ * @brief Получить значение точки регулирования
+ * 
+ * @param index Индекс точки регулирования
+ * @param pnt Указатель на заполяемую структуру
+ * @return true Требуемая точка регулирования есть
+ * @return false Требуемой точки регулирования нет
+ */
 bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex;
@@ -1195,8 +1216,13 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
     pnt->step = FBDGETPARAMETER(elemIndex, 4);
     return true;
 }
-// -------------------------------------------------------------------------------------------------------
-// установить значение точки регулирования
+
+/**
+ * @brief Установить значение точки регулирования
+ * 
+ * @param index Индекс точки регулирования
+ * @param value Устанавливаемое значение
+ */
 void fbdHMIsetSP(tSignal index, tSignal value)
 {
     tElemIndex elemIndex;
@@ -1208,8 +1234,15 @@ void fbdHMIsetSP(tSignal index, tSignal value)
 #endif // SPEED_OPT
     fbdSetStorage(elemIndex, 0, value);
 }
-// -------------------------------------------------------------------------------------------------------
-// получить значение точки контроля
+
+/**
+ * @brief Получить значение точки контроля.
+ * Заполняет описание точки контроля по адресу pnt, если указанная точка имеется
+ * @param index Индекс точки контроля
+ * @param pnt Указатель на описание точки контроля
+ * @return true Точка контроля присутствует
+ * @return false Точка контроля отсутствует
+ */
 bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex = 0;
@@ -1274,15 +1307,20 @@ DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index)
         while(*(curHint++));
     }
 }
-// -------------------------------------------------------------------------------------------------------
-// расчет указателя на текстовое описание элемента по индексу описания
+
+/**
+ * @brief Расчет указателя на текстовое описание элемента по индексу описания
+ * 
+ * @param captionIndex Индекс описания
+ * @return DESCR_MEM char DESCR_MEM_SUFX Указатель на текстовое описание
+ */
 DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex)
 {
     tOffset offset = 0;
     while(captionIndex) if(!fbdCaptionsBuf[offset++]) captionIndex--;
     return &fbdCaptionsBuf[offset];
 }
-//
+
 #ifndef SPEED_OPT
 // -------------------------------------------------------------------------------------------------------
 // расчет указателя на текстовое описание элемента по индексу элемента
@@ -1304,9 +1342,14 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
 }
 #endif // SPEED_OPT
 #endif // USE_HMI
-//
+
 // -------------------------------------------------------------------------------------------------------
-// расчет выходного значения элемента
+
+/**
+ * @brief Расчёт выходного значения элемента
+ * 
+ * @param curIndex Индекс элемента
+ */
 void fbdCalcElement(tElemIndex curIndex)
 {
     tFBDStackItem fbdStack[FBDSTACKSIZE];       // стек вычислений
@@ -1583,8 +1626,14 @@ void fbdCalcElement(tElemIndex curIndex)
         } else break;                                       // стек пуст, вычисления завершены
     } while(1);
 }
-// -------------------------------------------------------------------------------------------------------
-// сохранить память элемента
+
+/**
+ * @brief Сохранить значение в EEPROM памяти элемента
+ * 
+ * @param element Индекс элемента
+ * @param index Индекс ячейки памяти
+ * @param value Значение
+ */
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
 #ifdef SPEED_OPT
@@ -1601,32 +1650,54 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
         FBDsetProc(1, offset, &fbdStorageBuf[offset]);
     }
 }
-// -------------------------------------------------------------------------------------------------------
-// установить флаг "Элемент вычислен"
+
+/**
+ * @brief Установить флаг "Элемент вычислен"
+ * 
+ * @param element Индекс элемента
+ */
 void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<((element&3)<<1);
 }
-// -------------------------------------------------------------------------------------------------------
-// установка rising flag
+
+/**
+ * @brief Установка флага нарастания выходного значения элемента (rising flag)
+ * 
+ * @param element Индекс элемента
+ */
 void setRiseFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<(((element&3)<<1)+1);
 }
-// -------------------------------------------------------------------------------------------------------
-// получение флага "Элемент вычислен"
+
+/**
+ * @brief Получение значения флага "Элемент вычислен"
+ * 
+ * @param element Индекс элемента
+ * @return char 1 - установлен, 0 - сброшен
+ */
 char getCalcFlag(tElemIndex element)
 {
    return (fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1)))?1:0;
 }
-// -------------------------------------------------------------------------------------------------------
-// получение флага "rising flag"
+
+/**
+ * @brief Получение значения флага нарастания выходного значения элемента (rising flag)
+ * 
+ * @param element Индекс элемента
+ * @return char 1 - установлен, 0 - сброшен
+ */
 char getRiseFlag(tElemIndex element)
 {
     return (fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1)))?1:0;
 }
-// -------------------------------------------------------------------------------------------------------
-// установка флага изменения переменной
+
+/**
+ * @brief Установка флага изменения выходной сетевой переменной
+ * 
+ * @param index Индекс элемента ELEM_OUT_VAR
+ */
 void setChangeVarFlag(tElemIndex index)
 {
     tElemIndex varIndex = 0;

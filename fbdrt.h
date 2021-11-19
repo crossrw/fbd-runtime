@@ -332,11 +332,14 @@ void fbdChangeAllNetVars(void);
 //
 // скорость обмена:
 typedef enum {
-    FBD_BR_9600                 = 0,
-    FBD_BR_19200                = 1,
-    FBD_BR_38400                = 2,
-    FBD_BR_57600                = 3,
-    FBD_BR_115200               = 4
+    FBD_BR_1200                 = 0,
+    FBD_BR_2400                 = 1,
+    FBD_BR_4800                 = 2,
+    FBD_BR_9600                 = 3,
+    FBD_BR_19200                = 4,
+    FBD_BR_38400                = 5,
+    FBD_BR_57600                = 6,
+    FBD_BR_115200               = 7
 } tFBD_BAUDRATE;
 //
 // контроль чётности:
@@ -376,7 +379,7 @@ typedef enum {
 // структура описания настроек последовательного порта Modbus RTU
 typedef struct modbusrtusettings_t {
     unsigned int timeout;                   // время одидания ответа в мс (0..4095)
-    tFBD_BAUDRATE baudRate;                 // скорость обмена: 0-9600, 1-19200, 2-38400, 3-57600, 4-115200
+    tFBD_BAUDRATE baudRate;                 // скорость обмена
     tFBD_PARITY parity;                     // контроль чётности: 0-None, 1-Odd, 2-Even
     tFBD_STOPB stopBits;                    // количество стоп-бит: 0-1, 1-2
 } tModbusRTUsettings;
