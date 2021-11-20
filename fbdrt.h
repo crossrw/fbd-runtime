@@ -440,7 +440,7 @@ void fbdSetModbusRTUResponse(tSignal response);
 //
 // Установить признак неуспешного результата полученного ранее запроса ModBus RTU
 // Функция должна быть вызвана после неудачного выполнения запроса Modbus RTU
-void fbdSetModbusRTUNoResponse(void);
+void fbdSetModbusRTUNoResponse(int errCode);
 
 // Modbus TCP
 
@@ -457,7 +457,7 @@ void fbdSetModbusTCPResponse(tSignal response);
 //
 // Установить признак неуспешного результата полученного ранее запроса ModBus TCP
 // Функция должна быть вызвана после неудачного выполнения запроса Modbus TCP
-void fbdSetModbusTCPNoResponse(void);
+void fbdSetModbusTCPNoResponse(int errCode);
 
 // -------------------------------------------------------------------------------------------------------
 // Получение значений глобальных настроек схемы
@@ -476,19 +476,20 @@ enum FBD_OPTIONS {
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
 extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
-#define FBD_REQ_VERSION     fbdGlobalOptions[FBD_OPT_REQ_VERSION]
-#define FBD_NETVAR_USE      fbdGlobalOptions[FBD_OPT_NETVAR_USE]
-#define FBD_NETVAR_PORT     fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
-#define FBD_NETVAR_GROUP    fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
-#define FBD_SCREEN_COUNT    ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
-#define FBD_SCHEMA_SIZE     ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
-#define FBD_HINTS_COUNT     ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
-#define FBD_MODBUSRTU_OPT   ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT]:0)
+#define FBD_REQ_VERSION         fbdGlobalOptions[FBD_OPT_REQ_VERSION]
+#define FBD_NETVAR_USE          fbdGlobalOptions[FBD_OPT_NETVAR_USE]
+#define FBD_NETVAR_PORT         fbdGlobalOptions[FBD_OPT_NETVAR_PORT]
+#define FBD_NETVAR_GROUP        fbdGlobalOptions[FBD_OPT_NETVAR_GROUP]
+#define FBD_SCREEN_COUNT        ((*fbdGlobalOptionsCount>FBD_OPT_SCREEN_COUNT)?fbdGlobalOptions[FBD_OPT_SCREEN_COUNT]:0)
+#define FBD_SCHEMA_SIZE         ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
+#define FBD_HINTS_COUNT         ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
+#define FBD_MODBUSRTU_OPT       ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT]:0)
+#define FBD_MODBUS_RETRYCOUNT   ((FBD_MODBUSRTU_OPT >> 19) & 3)
 
 // FBD_MODBUS_OPT
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// |1 |              Reserve              |SB| Par | Baud Rate |           Таймаут ответа          |
+// |1 |              Reserve        |  RC |SB| Par | Baud Rate |           Таймаут ответа          |
 //
 // 00..11: Таймаут ответа - время одидания ответа (0..4095), мс
 // 12..15: Baud Rate:
@@ -504,7 +505,12 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 // 18: StopBits:
 //  0    - 1
 //  1    - 2
-// 31: 
+// 19..20: RC - количество повторных попыток при ошибке чтения
+//  00   - 0
+//  01   - 1
+//  10   - 2
+//  11   - 3
+// 31:
 //  0    - не менять настройки последовательного порта
 //  1    - менять настройки последовательного порта
 

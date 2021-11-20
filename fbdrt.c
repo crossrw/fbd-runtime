@@ -246,6 +246,8 @@ tElemIndex fbdModbusRTUCount;
 tElemIndex fbdModbusTCPCount;
 tElemIndex fbdModbusRTUIndex;
 tElemIndex fbdModbusTCPIndex;
+unsigned char fbdModbusRTUErrorCounter;
+unsigned char fbdModbusTCPErrorCounter;
 
 #ifdef USE_HMI
 tElemIndex fbdWpCount;
@@ -365,7 +367,13 @@ tSignal _fbdGetStorage(tElemIndex element, unsigned char index)
 }
 #endif // SPEED_OPT
 
-// расчет CRC32, используется при проверке корректности программы
+/**
+ * @brief Расчёт контрльной суммы CRC32
+ * Используется при проверке корректности программы.
+ * @param data Указатель на массив данных
+ * @param size Размер массива данных
+ * @return unsigned long int Результат вычисления
+ */
 unsigned long int fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int size)
 {
     unsigned long int crc = ~0;
@@ -407,6 +415,8 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     //
     fbdModbusRTUIndex = MAX_INDEX;
     fbdModbusTCPIndex = MAX_INDEX;
+    fbdModbusRTUErrorCounter = 0;
+    fbdModbusTCPErrorCounter = 0;
     fbdModbusRTUCount = 0;
     fbdModbusTCPCount = 0;
 #ifdef USE_HMI
@@ -535,6 +545,8 @@ void fbdSetMemory(char *buf, bool needReset)
 #endif // SPEED_OPT
     fbdModbusRTUIndex = MAX_INDEX;
     fbdModbusTCPIndex = MAX_INDEX;
+    fbdModbusRTUErrorCounter = 0;
+    fbdModbusTCPErrorCounter = 0;
     fbdModbusRTUCount = 0;
     fbdModbusTCPCount = 0;
     //
@@ -1059,30 +1071,45 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
     // поиск следующего элемента Modbus RTU
     tElemIndex index, i;
     unsigned char elem;
-    // поиск следующего элемента
-    index = fbdModbusRTUIndex;
-    for(i=0; i < fbdElementsCount; i++) {
-        // переходим к следующему элементу
-        index++;
-        if(index >= fbdElementsCount) index = 0;
-        elem = fbdDescrBuf[index] & ELEMMASK;
-        if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
-            // проверяем тип Modbus
-            if(!FBDGETPARAMETER(index, 0)) {
-                // это Modbus RTU
-                if(elem == ELEM_OUT_MDBS) {
-                    // если это элемент записи, то проверяем флаг изменений
-                    // если флаг не установлен, то переходим к следующему элементу
-                    // если установлен, то формируем команду записи
-                    if(!getAndClearChangeModbusFlag(index)) continue;
+    // проверка необходимости повторного запроса
+    if(fbdModbusRTUErrorCounter) {
+        // необходим повторный запрос
+        fbdModbusRTUErrorCounter--;
+        fillModbusRequest(fbdModbusRTUIndex, mbrequest);
+        //
+        return true;
+    } else {
+        // поиск следующего элемента
+        index = fbdModbusRTUIndex;
+        for(i=0; i < fbdElementsCount; i++) {
+            // переходим к следующему элементу
+            index++;
+            if(index >= fbdElementsCount) index = 0;
+            elem = fbdDescrBuf[index] & ELEMMASK;
+            if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
+                // проверяем тип Modbus
+                if(!FBDGETPARAMETER(index, 0)) {
+                    // это Modbus RTU
+                    if(elem == ELEM_OUT_MDBS) {
+                        // если это элемент записи, то проверяем флаг изменений
+                        // если флаг не установлен, то переходим к следующему элементу
+                        // если установлен, то формируем команду записи
+                        if(!getAndClearChangeModbusFlag(index)) continue;
+                        // повторные запросы при записи не используем, они и так будут работать из-за флагов изменения
+                        fbdModbusRTUErrorCounter = 0;
+                    } else {
+                        // устанавливаем количество повторных запросов
+                        fbdModbusRTUErrorCounter = FBD_MODBUS_RETRYCOUNT;
+                    }
+                    // нашли подходящий элемент
+                    fbdModbusRTUIndex = index;
+                    fillModbusRequest(index, mbrequest);
+                    return true;
                 }
-                // нашли подходящий элемент
-                fbdModbusRTUIndex = index;
-                fillModbusRequest(index, mbrequest);
-                return true;
             }
         }
     }
+    //
     return false;
 }
 
@@ -1093,6 +1120,7 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
  */
 void fbdSetModbusRTUResponse(tSignal response)
 {
+    fbdModbusRTUErrorCounter = 0;
     setModbusResponse(fbdModbusRTUIndex, response);
 }
 
@@ -1100,10 +1128,15 @@ void fbdSetModbusRTUResponse(tSignal response)
  * @brief Установить признак неуспешного результата выполнения запроса ModBus RTU.
  * Устанавливается признак неуспешного чтения или записи Modbus для ранее полученного описания запроса.
  * Должна вызываться при любой ошибке: нет ответа, ошибка CRC, получение кода исключения и т.п.
+ * 
+ * @param errCode Код ошибки: 0 - нет ответа или ошибка CRC, !=0 - ответ с кодом исключения
  */
-void fbdSetModbusRTUNoResponse(void)
+void fbdSetModbusRTUNoResponse(int errCode)
 {
-    setModbusNoResponse(fbdModbusRTUIndex);
+    if((errCode != 0) || (fbdModbusRTUErrorCounter == 0)) {
+        fbdModbusRTUErrorCounter = 0;
+        setModbusNoResponse(fbdModbusRTUIndex);
+    }
 }
 
 /**
@@ -1119,30 +1152,45 @@ bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest)
     // поиск следующего элемента Modbus TCP
     tElemIndex index, i;
     unsigned char elem;
-    // поиск следующего элемента
-    index = fbdModbusTCPIndex;
-    for(i=0; i < fbdElementsCount; i++) {
-        // переходим к следующему элементу
-        index++;
-        if(index >= fbdElementsCount) index = 0;
-        elem = fbdDescrBuf[index] & ELEMMASK;
-        if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
-            // проверяем тип Modbus
-            if(FBDGETPARAMETER(index, 0)) {
-                // это Modbus TCP
-                if(elem == ELEM_OUT_MDBS) {
-                    // если это элемент записи, то проверяем флаг изменений
-                    // если флаг не установлен, то переходим к следующему элементу
-                    // если установлен, то формируем команду записи
-                    if(!getAndClearChangeModbusFlag(index)) continue;
+    // проверка необходимости повторного запроса
+    if(fbdModbusTCPErrorCounter) {
+        // необходим повторный запрос
+        fbdModbusTCPErrorCounter--;
+        fillModbusRequest(fbdModbusTCPIndex, mbrequest);
+        //
+        return true;
+    } else {
+        // поиск следующего элемента
+        index = fbdModbusTCPIndex;
+        for(i=0; i < fbdElementsCount; i++) {
+            // переходим к следующему элементу
+            index++;
+            if(index >= fbdElementsCount) index = 0;
+            elem = fbdDescrBuf[index] & ELEMMASK;
+            if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
+                // проверяем тип Modbus
+                if(FBDGETPARAMETER(index, 0)) {
+                    // это Modbus TCP
+                    if(elem == ELEM_OUT_MDBS) {
+                        // если это элемент записи, то проверяем флаг изменений
+                        // если флаг не установлен, то переходим к следующему элементу
+                        // если установлен, то формируем команду записи
+                        if(!getAndClearChangeModbusFlag(index)) continue;
+                        // повторные запросы при записи не используем, они и так будут работать из-за флагов изменения
+                        fbdModbusTCPErrorCounter = 0;
+                    } else {
+                        // устанавливаем количество повторных запросов
+                        fbdModbusTCPErrorCounter = FBD_MODBUS_RETRYCOUNT;
+                    }
+                    // нашли подходящий элемент
+                    fbdModbusTCPIndex = index;
+                    fillModbusRequest(index, mbrequest);
+                    return true;
                 }
-                // нашли подходящий элемент
-                fbdModbusTCPIndex = index;
-                fillModbusRequest(index, mbrequest);
-                return true;
             }
         }
     }
+    //
     return false;
 }
 
@@ -1154,16 +1202,22 @@ bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest)
  */
 void fbdSetModbusTCPResponse(tSignal response)
 {
+    fbdModbusTCPErrorCounter = 0;
     setModbusResponse(fbdModbusTCPIndex, response);
 }
 
 /**
  * @brief Установить признак неуспешного результата выполнения запроса ModBus TCP.
  * Устанавливается признак неуспешного чтения или записи Modbus для ранее полученного описания запроса.
+ * 
+ * @param errCode Код ошибки: 0 - нет ответа или ошибка CRC, !=0 - ответ с кодом исключения
  */
-void fbdSetModbusTCPNoResponse(void)
+void fbdSetModbusTCPNoResponse(int errCode)
 {
-    setModbusNoResponse(fbdModbusTCPIndex);
+    if((errCode != 0) || (fbdModbusTCPErrorCounter == 0)) {
+        fbdModbusTCPErrorCounter = 0;
+        setModbusNoResponse(fbdModbusTCPIndex);
+    }
 }
 
 #ifdef USE_HMI
