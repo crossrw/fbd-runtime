@@ -246,6 +246,9 @@ tElemIndex fbdModbusRTUCount;
 tElemIndex fbdModbusTCPCount;
 tElemIndex fbdModbusRTUIndex;
 tElemIndex fbdModbusTCPIndex;
+short      fbdModbusRTUTimer;
+short      fbdModbusTCPTimer;
+
 unsigned char fbdModbusRTUErrorCounter;
 unsigned char fbdModbusTCPErrorCounter;
 
@@ -545,8 +548,13 @@ void fbdSetMemory(char *buf, bool needReset)
 #endif // SPEED_OPT
     fbdModbusRTUIndex = MAX_INDEX;
     fbdModbusTCPIndex = MAX_INDEX;
+    //
     fbdModbusRTUErrorCounter = 0;
     fbdModbusTCPErrorCounter = 0;
+    //
+    fbdModbusRTUTimer = 0;
+    fbdModbusTCPTimer = 0;
+    //
     fbdModbusRTUCount = 0;
     fbdModbusTCPCount = 0;
     //
@@ -921,6 +929,11 @@ void fbdDoStep(tSignal period)
     tElemIndex index;
     // сброс признаков расчета и нарастающего фронта
     memset(fbdFlagsBuf, 0, fbdFlagsByteCount);
+    // модификация таймеров Modbus
+    if(period) {
+        if(period <= fbdModbusRTUTimer) fbdModbusRTUTimer -= period; else fbdModbusRTUTimer = 0;
+        if(period <= fbdModbusTCPTimer) fbdModbusTCPTimer -= period; else fbdModbusTCPTimer = 0;
+    }
     // основной цикл расчета
     for(index=0; index < fbdElementsCount; index++) {
         unsigned char element = fbdDescrBuf[index] & ELEMMASK;
@@ -931,6 +944,7 @@ void fbdDoStep(tSignal period)
             case ELEM_SUM:                                                  // SUM
             case ELEM_TP:                                                   // timer TP
             case ELEM_GEN:                                                  // GEN
+                if(!period) break;
                 value = FBDGETSTORAGE(index, 0);
                 if(value) {
                     value -= period;
@@ -1084,7 +1098,12 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
         for(i=0; i < fbdElementsCount; i++) {
             // переходим к следующему элементу
             index++;
-            if(index >= fbdElementsCount) index = 0;
+            if(index >= fbdElementsCount) {
+                // проверка таймера минимального периода опроса
+                if(fbdModbusRTUTimer) return false;
+                fbdModbusRTUTimer = FBD_MODBUS_PAUSE;
+                index = 0;
+            }
             elem = fbdDescrBuf[index] & ELEMMASK;
             if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
                 // проверяем тип Modbus
@@ -1125,8 +1144,8 @@ void fbdSetModbusRTUResponse(tSignal response)
 }
 
 /**
- * @brief Установить признак неуспешного результата выполнения запроса ModBus RTU.
- * Устанавливается признак неуспешного чтения или записи Modbus для ранее полученного описания запроса.
+ * @brief Установить признак не успешного результата выполнения запроса ModBus RTU.
+ * Устанавливается признак не успешного чтения или записи Modbus для ранее полученного описания запроса.
  * Должна вызываться при любой ошибке: нет ответа, ошибка CRC, получение кода исключения и т.п.
  * 
  * @param errCode Код ошибки: 0 - нет ответа или ошибка CRC, !=0 - ответ с кодом исключения
@@ -1165,7 +1184,12 @@ bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest)
         for(i=0; i < fbdElementsCount; i++) {
             // переходим к следующему элементу
             index++;
-            if(index >= fbdElementsCount) index = 0;
+            if(index >= fbdElementsCount) {
+                // проверка таймера минимального периода опроса
+                if(fbdModbusTCPTimer) return false;
+                fbdModbusTCPTimer = FBD_MODBUS_PAUSE;
+                index = 0;
+            }
             elem = fbdDescrBuf[index] & ELEMMASK;
             if((elem == ELEM_INP_MDBS)||(elem == ELEM_OUT_MDBS)) {
                 // проверяем тип Modbus
@@ -1207,8 +1231,8 @@ void fbdSetModbusTCPResponse(tSignal response)
 }
 
 /**
- * @brief Установить признак неуспешного результата выполнения запроса ModBus TCP.
- * Устанавливается признак неуспешного чтения или записи Modbus для ранее полученного описания запроса.
+ * @brief Установить признак не успешного результата выполнения запроса ModBus TCP.
+ * Устанавливается признак не успешного чтения или записи Modbus для ранее полученного описания запроса.
  * 
  * @param errCode Код ошибки: 0 - нет ответа или ошибка CRC, !=0 - ответ с кодом исключения
  */

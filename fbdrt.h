@@ -485,11 +485,12 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_HINTS_COUNT         ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
 #define FBD_MODBUSRTU_OPT       ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT]:0)
 #define FBD_MODBUS_RETRYCOUNT   ((FBD_MODBUSRTU_OPT >> 19) & 3)
+#define FBD_MODBUS_PAUSE        ((FBD_MODBUSRTU_OPT >> 21) & 1023)
 
 // FBD_MODBUS_OPT
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// |1 |              Reserve        |  RC |SB| Par | Baud Rate |           Таймаут ответа          |
+// |1 |            Pause            |  RC |SB| Par | Baud Rate |           Таймаут ответа          |
 //
 // 00..11: Таймаут ответа - время одидания ответа (0..4095), мс
 // 12..15: Baud Rate:
@@ -510,6 +511,7 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 //  01   - 1
 //  10   - 2
 //  11   - 3
+// 21..30: Pause - пауза между запросами (0..1023), мс
 // 31:
 //  0    - не менять настройки последовательного порта
 //  1    - менять настройки последовательного порта
