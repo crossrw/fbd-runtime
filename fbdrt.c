@@ -113,7 +113,7 @@ void setModbusNoResponse(tElemIndex index);
 void setModbusResponse(tElemIndex index, tSignal response);
 void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest);
 void setModbusFloat(tElemIndex index, float data, float mul);
-unsigned long int getCoilBitsMask(unsigned count);
+uint32_t getCoilBitsMask(unsigned count);
 void swapModbusByteOrder(tModbusData *data);
 void swapModbusWordOrder(tModbusData *data);
 
@@ -262,13 +262,13 @@ unsigned short fbdCurrentScreenTimer;        // таймер текущего э
 char fbdFirstFlag;
 
 // массив с количествами входов для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1};
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2};
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2};
 // массив с количествами хранимых данных для элементов каждого типа
-ROM_CONST unsigned char ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0};
-//                                                                                 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3
-//                                                                                 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0};
+//                                                                           0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3
+//                                                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4
 // Параметры элемента ELEM_INP_MDBS (чтение Modbus)
 //
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
@@ -375,16 +375,16 @@ tSignal _fbdGetStorage(tElemIndex element, unsigned char index)
  * Используется при проверке корректности программы.
  * @param data Указатель на массив данных
  * @param size Размер массива данных
- * @return unsigned long int Результат вычисления
+ * @return uint32_t Результат вычисления
  */
-unsigned long int fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int size)
+uint32_t fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int size)
 {
-    unsigned long int crc = ~0;
+    uint32_t crc = ~0;
     //
     while(size--) {
         crc ^= *data++;
         for(int i = 0; i < 8; i++) {
-            unsigned long int t = ~((crc&1)-1);
+            uint32_t t = ~((crc&1)-1);
             crc = (crc>>1) ^ (0xEDB88320 & t);
         }
     }
@@ -2113,9 +2113,9 @@ inline tSignal intAbs(tSignal val)
  * @brief Возвращает значение у кторого установлены count младших бит.
  * 
  * @param count Количество бит
- * @return unsigned long int Результат
+ * @return uint32_t Результат
  */
-unsigned long int getCoilBitsMask(unsigned count)
+uint32_t getCoilBitsMask(unsigned count)
 {
     if(count < 32) {
         return (1 << count) - 1;

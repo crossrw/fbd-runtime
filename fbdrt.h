@@ -9,7 +9,8 @@
 #ifndef FBDRT_H
 #define	FBDRT_H
 
-#include <stdbool.h>       // For true/false definition
+#include <stdbool.h>        // for true/false definition
+#include <stdint.h>         // type definition
 
 // 7 - базовая
 // 8 - поддержка экранов
@@ -65,9 +66,9 @@
 #define FBDSTACKSIZE 128
 //
 // data type for stack pointer
-typedef unsigned char tFBDStackPnt;
+typedef uint8_t tFBDStackPnt;
 //
-typedef long tLongSignal;
+typedef int32_t tLongSignal;
 //
 // = конец настроек ========================================================
 // =========================================================================
@@ -123,7 +124,7 @@ typedef enum {
 #endif // M_PI
 #endif // USE_MATH
 
-typedef unsigned short tOffset;
+typedef uint16_t tOffset;
 //
 #if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
 #define SIGNAL_BYTE_ORDER(x) lotobigsign(x)
@@ -138,29 +139,29 @@ typedef unsigned short tOffset;
 #endif // defined
 
 #if (SIGNAL_SIZE == 1)
-typedef signed char tSignal;
-#define MAX_SIGNAL 127
-#define MIN_SIGNAL (-128)
+typedef int8_t tSignal;
+#define MAX_SIGNAL INT8_MAX
+#define MIN_SIGNAL INT8_MIN
 //
 #elif (SIGNAL_SIZE == 2)
-typedef signed short tSignal;
-#define MAX_SIGNAL 32767
-#define MIN_SIGNAL (-32768)
+typedef int16_t tSignal;
+#define MAX_SIGNAL INT16_MAX
+#define MIN_SIGNAL INT16_MIN
 //
 #elif (SIGNAL_SIZE == 4)
-typedef signed long int tSignal;
-#define MAX_SIGNAL 2147483647L
-#define MIN_SIGNAL (-2147483648L)
+typedef int32_t tSignal;
+#define MAX_SIGNAL INT32_MAX
+#define MIN_SIGNAL INT32_MIN
 #else
 #error Invalid value of SIGNAL_SIZE
 #endif // SIGNAL_SIZE
 //
 #if INDEX_SIZE == 1
-typedef unsigned char tElemIndex;
-#define MAX_INDEX 255
+typedef uint8_t tElemIndex;
+#define MAX_INDEX UINT8_MAX
 #elif INDEX_SIZE == 2
-typedef unsigned short tElemIndex;
-#define MAX_INDEX 65535
+typedef uint16_t tElemIndex;
+#define MAX_INDEX UINT16_MAX
 #else
 #error Invalid value of INDEX_SIZE
 #endif // INDEX_SIZE
@@ -200,25 +201,25 @@ void fbdDoStep(tSignal period);
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 240
 
-typedef unsigned short tScreenDim;
-typedef unsigned short tColor;
+typedef uint16_t tScreenDim;
+typedef uint16_t tColor;
 
 // описание структуры экрана
 typedef __packed_struct Screen_t {
-    unsigned short len;                                         // размер экрана                    2
+    uint16_t len;                                               // размер экрана                    2
     tColor bkcolor;                                             // цвет фона                        2
-    unsigned short period;                                      // период обновления                2
-    unsigned short elemCount;                                   // количество элементов экрана      2
+    uint16_t period;                                            // период обновления                2
+    uint16_t elemCount;                                         // количество элементов экрана      2
     // тут элементы экрана
 } tScreen;
 
 // описание элементов экрана
 // базовый элемент с видимостью
 typedef __packed_struct ScrElemBase_t {
-    unsigned short len;                                         // размер структуры                 2
-    unsigned short type;                                        // тип элемента                     2
+    uint16_t len;                                               // размер структуры                 2
+    uint16_t type;                                              // тип элемента                     2
     //
-    unsigned short visibleCond;                                 // условие видимости                2
+    uint16_t visibleCond;                                       // условие видимости                2
     tElemIndex visibleElem;                                     // индекс элемента                  2
     tSignal visibleValue;                                       // константа - значение сигнала     4
     //
@@ -233,7 +234,7 @@ typedef __packed_struct ScrElemRect_t {
     tScreenDim x2;                                              // координата x2                    2
     tScreenDim y2;                                              // координата y2                    2
     tColor color;                                               // цвет                             2
-    unsigned short reserve;                                     //                                  2
+    uint16_t reserve;                                           //                                  2
 } tScrElemRect;
 
 // элемент эллипс
@@ -243,7 +244,7 @@ typedef __packed_struct ScrElemCircle_t {
     tScreenDim x2;                                              // координата x2                    2
     tScreenDim y2;                                              // координата y2                    2
     tColor color;                                               // цвет                             2
-    unsigned short reserve;                                     //                                  2
+    uint16_t reserve;                                           //                                  2
 } tScrElemCircle;
 
 // элемент линия
@@ -262,8 +263,8 @@ typedef __packed_struct ScrElemLine_t {
 typedef __packed_struct ScrElemImage_t {
     tScrElemBase parent;                                        //                                  16
     //
-    unsigned short index;                                       // индекс картинки                  2
-    unsigned short reserve;                                     //                                  2 !!!
+    uint16_t index;                                             // индекс картинки                  2
+    uint16_t reserve;                                           //                                  2 !!!
 } tScrElemImage;
 
 // элемент текст
@@ -274,8 +275,8 @@ typedef __packed_struct ScrElemText_t {
     tColor bkcolor;                                             // цвет фона                        2
     //
     tElemIndex valueElem;                                       // индекс элемента                  2
-    unsigned char font;                                         // индекс шрифта, старший бит прозрачность 1
-    unsigned char divider;                                      // делитель                         1
+    uint8_t font;                                               // индекс шрифта, старший бит прозрачность 1
+    uint8_t divider;                                            // делитель                         1
     char text[];                                                // сам текст, заканчивается 0       длинна должны быть кратна 4 !
 } tScrElemText;
 
@@ -291,7 +292,7 @@ typedef __packed_struct ScrElemGauge_t {
     //
     tSignal maxvalue;                                           // максимальное значение шкалы      4
     tElemIndex valueElem;                                       // индекс элемента                  2
-    unsigned short orientation;                                 // ориентация: 0 - гор, 1 - вер     2
+    uint16_t orientation;                                       // ориентация: 0 - гор, 1 - вер     2
 } tScrElemGauge;
 
 // один шаг вычисления схемы с последующим рисованием (при необходимости) экрана screen
@@ -388,19 +389,19 @@ typedef struct modbusrtusettings_t {
 typedef union {
     tSignal         intData;
     float           floatData;
-    unsigned short  ushortData[2];
-    short           shortData[2];
-    unsigned char   byteData[4];
+    uint16_t        ushortData[2];
+    int16_t         shortData[2];
+    uint8_t         byteData[4];
 
 } tModbusData;
 
 // структура описания запроса MODBUS
 typedef struct modbusreq_t {
     tSignal ip;                             // ip адрес устройства, если ==0, то использовать протокол RTU
-    unsigned char slaveAddr;                // адрес устройства
+    uint8_t slaveAddr;                      // адрес устройства
     tFBD_MODBUS_FUNCTION funcCode;          // код функции
-    unsigned short regAddr;                 // адрес регистра ModBus
-    unsigned short regCount;                // количество регистров
+    uint16_t regAddr;                       // адрес регистра ModBus
+    uint16_t regCount;                      // количество регистров
     tModbusData data;                       // данные, только для запросов записи
 } tModbusReq;
 
