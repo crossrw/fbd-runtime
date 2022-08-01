@@ -44,7 +44,7 @@
  * @brief Чтение значения входного сигнала или NVRAM.
  * Должна быть описана в основной программе.
  * 
- * @param type Tип чтения: 0 - входной сигнал, 1 - значение NVRAM
+ * @param type Tип чтения: FBD_PIN - входной сигнал, FBD_NVRAM - значение NVRAM
  * @param index Индекс читаемого значения
  * @return tSignal Прочитанное значение сигнала
  */
@@ -54,7 +54,7 @@ extern tSignal FBDgetProc(char type, tSignal index);
  * @brief Запись значения выходного сигнала или NVRAM.
  * Должна быть описана в основной программе.
  * 
- * @param type Tип записи: 0 - выходной сигнал, 1 - значение NVRAM
+ * @param type Tип записи: FBD_PIN - выходной сигнал, FBD_NVRAM - значение NVRAM
  * @param index Индекс записываемого значения
  * @param value Записываемое значение.
  */
@@ -470,8 +470,15 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     fbdParametersBuf = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdInputsBuf + inputs);
     fbdGlobalOptionsCount = (DESCR_MEM unsigned char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
     fbdGlobalOptions = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdGlobalOptionsCount + 1);
+    //
     // проверка версии программы
     if(*fbdGlobalOptions > FBD_LIB_VERSION) return ERR_INVALID_LIB_VERSION;
+    //
+    // расчёт и проверка CRC, если указан параметр FBD_SCHEMA_SIZE
+    if(FBD_SCHEMA_SIZE) {
+        // если результат 0, то CRC не используется (старая версия редактора)
+        if(fbdCRC32(fbdDescrBuf, FBD_SCHEMA_SIZE)) return ERR_INVALID_CHECK_SUM;
+    }
 #ifdef USE_HMI
     // указатель на начало текстовых строк точек контроля и регулирования
     fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
@@ -500,11 +507,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         fbdIOHints = (DESCR_MEM char DESCR_MEM_SUFX *)screen;
     }
 #endif // USE_HMI
-    // расчёт и проверка CRC, если указан параметр FBD_SCHEMA_SIZE
-    if(FBD_SCHEMA_SIZE) {
-        // если результат 0, то CRC не используется (старая версия редактора)
-        if(fbdCRC32(fbdDescrBuf, FBD_SCHEMA_SIZE)) return ERR_INVALID_CHECK_SUM;
-    }
+    //
     // память для флагов расчета и фронта
     fbdFlagsByteCount = (fbdElementsCount>>2) + ((fbdElementsCount&3)?1:0);
     // память для флагов изменений значения выходной переменной
@@ -574,9 +577,9 @@ void fbdSetMemory(char *buf, bool needReset)
     for(i = 0; i < fbdStorageCount; i++) {
         if(needReset) {
             fbdStorageBuf[i] = 0;
-            FBDsetProc(1, i, &fbdStorageBuf[i]);
+            FBDsetProc(FBD_NVRAM, i, &fbdStorageBuf[i]);
         } else {
-            fbdStorageBuf[i] = FBDgetProc(1, i);
+            fbdStorageBuf[i] = FBDgetProc(FBD_NVRAM, i);
         }
     }
 #ifdef SPEED_OPT
@@ -775,49 +778,49 @@ void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
                             switch(nc) {
                                 case 'd':
                                     if(k < (sizeof(dttext)-2))  {
-                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_DAY));
+                                        sprintf2d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_DAY));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'm':
                                     if(k < (sizeof(dttext)-2)) {
-                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_MONTH));
+                                        sprintf2d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_MONTH));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'y':
                                     if(k < (sizeof(dttext)-2)) {
-                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_YEAR)-2000);
+                                        sprintf2d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_YEAR)-2000);
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'h':
                                     if(k < (sizeof(dttext)-2)) {
-                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_HOUR));
+                                        sprintf2d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_HOUR));
                                         k += 2;
                                     }
                                     j++;
-                                    break;                                
+                                    break;
                                 case 'n':
                                     if(k < (sizeof(dttext)-2)) {
-                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_MINUTE));
+                                        sprintf2d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_MINUTE));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 's':
                                     if(k < (sizeof(dttext)-2)) {
-                                        sprintf2d(&dttext[k], FBDgetProc(0, GP_RTC_SECOND));
+                                        sprintf2d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_SECOND));
                                         k += 2;
                                     }
                                     j++;
                                     break;
                                 case 'Y':
                                     if(k < (sizeof(dttext)-4)) {
-                                        sprintf4d(&dttext[k], FBDgetProc(0, GP_RTC_YEAR));
+                                        sprintf4d(&dttext[k], FBDgetProc(FBD_PIN, GP_RTC_YEAR));
                                         k += 4;
                                     }
                                     j++;
@@ -955,7 +958,7 @@ void fbdDoStep(tSignal period)
             case ELEM_OUT_PIN:                                              // output PIN
                 fbdCalcElement(index);
                 param = FBDGETPARAMETER(index, 0);
-                FBDsetProc(0, param, &fbdMemoryBuf[index]);                 // установка значения выходного контакта
+                FBDsetProc(FBD_PIN, param, &fbdMemoryBuf[index]);           // установка значения выходного контакта
                 break;
             case ELEM_OUT_VAR:                                              // выходная переменная
             case ELEM_OUT_MDBS:                                             // запись Modbus
@@ -1243,6 +1246,47 @@ void fbdSetModbusTCPNoResponse(int errCode)
         setModbusNoResponse(fbdModbusTCPIndex);
     }
 }
+
+#ifdef USE_EVENTS
+
+/**
+ * @brief Возвращает общее количество (активных и не активных) событий в проекте.
+ * Если результат 0, то проект не использует события и журнал.
+ * 
+ * @return tSignal Количество событий в проекте
+ */
+tSignal fbdTotalEventsCount(void)
+{
+    return FBD_EVENTS_COUNT;
+}
+
+/**
+ * @brief TODO: Получить описание активного события с указанным индексом
+ * 
+ * @param index Индекс события (0..)
+ * @param event Указатель на структуру описания активного события
+ * @return true Событие есть, оно помещено в структуру event
+ * @return false События с таким (и большими) индексом нет
+ */
+bool fbdGetActiveEvent(tSignal index, tActiveEventDescription *event)
+{
+    return false;
+}
+
+/**
+ * @brief TODO: Получить описание события из журнала
+ * 
+ * @param index Индекс записи в журнале событий, 0 - самое новое (последнее)
+ * @param event Указатель на структуру описания события журнала
+ * @return true Событие есть, оно помещено в структуру event
+ * @return false События с таким индексом (и большими) в журнале нет
+ */
+bool fbdGetLogEvent(tSignal index, tActiveEventDescription *event)
+{
+    return false;
+}
+
+#endif  // USE_EVENTS
 
 #ifdef USE_HMI
 #ifndef SPEED_OPT
@@ -1556,7 +1600,7 @@ void fbdCalcElement(tElemIndex curIndex)
                     s1 = s1 > s2;
                     break;
                 case ELEM_INP_PIN:
-                    s1 = FBDgetProc(0, FBDGETPARAMETER(curIndex, 0));                   // INPUT PIN
+                    s1 = FBDgetProc(FBD_PIN, FBDGETPARAMETER(curIndex, 0));             // INPUT PIN
                     break;
                 case ELEM_INP_VAR:
                     s1 = FBDGETSTORAGE(curIndex, 0);                                    // INPUT VAR
@@ -1725,7 +1769,7 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 #endif // SPEED_OPT
     if(fbdStorageBuf[offset] != value) {
         fbdStorageBuf[offset] = value;
-        FBDsetProc(1, offset, &fbdStorageBuf[offset]);
+        FBDsetProc(FBD_NVRAM, offset, &fbdStorageBuf[offset]);
     }
 }
 

@@ -51,6 +51,9 @@
 // нобходимо определить символ USE_HMI если планируете использовать функции HMI
 #define USE_HMI
 //
+// нобходимо определить символ USE_EVENTS если планируете использовать события и журнал
+// #define USE_EVENTS
+//
 // нобходимо определить символ USE_MATH если планируете использовать генератор sin
 #define USE_MATH
 //
@@ -69,6 +72,13 @@
 typedef uint8_t tFBDStackPnt;
 //
 typedef int32_t tLongSignal;
+//
+// размер NVRAM
+#define NVRAMSIZE 4096
+//
+// максимальный индекс при обрашении к NVRAM
+#define MAXNVRAMINDEX (NVRAMSIZE/SIGNAL_SIZE-1)
+
 //
 // = конец настроек ========================================================
 // =========================================================================
@@ -116,6 +126,12 @@ typedef enum {
     //
     ELEM_TYPE_COUNT
 } tFBD_ELEMENT_TYPE;
+
+enum FBD_GETSETTYPE {
+    FBD_PIN     = 0,            // входной/выходной сигнал
+    FBD_NVRAM   = 1             // значение NVRAM
+};
+
 //
 #ifdef USE_MATH
 #include <math.h>
@@ -298,7 +314,7 @@ typedef __packed_struct ScrElemGauge_t {
 // один шаг вычисления схемы с последующим рисованием (при необходимости) экрана screen
 void fbdDoStepEx(tSignal period, short screenIndex);
 
-// перечисление используется в процедуре отрисовки тектовых сообщений на экране для получения текущего времени
+// перечисление используется в процедуре отрисовки текcтовых сообщений на экране для получения текущего времени
 enum GP_RTC_PARAMS {
     GP_RTC_HOUR     =  20,
     GP_RTC_MINUTE   =  21,
@@ -472,7 +488,8 @@ enum FBD_OPTIONS {
     FBD_OPT_SCREEN_COUNT    = 4,
     FBD_OPT_SCHEMA_SIZE     = 5,
     FBD_OPT_HINTS_COUNT     = 6,
-    FBD_OPT_MODBUSRTU_OPT   = 7
+    FBD_OPT_MODBUSRTU_OPT   = 7,
+    FBD_OPT_EVENTS_COUNT    = 8
 };
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
@@ -487,6 +504,7 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_MODBUSRTU_OPT       ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT]:0)
 #define FBD_MODBUS_RETRYCOUNT   ((FBD_MODBUSRTU_OPT >> 19) & 3)
 #define FBD_MODBUS_PAUSE        ((FBD_MODBUSRTU_OPT >> 21) & 1023)
+#define FBD_EVENTS_COUNT        ((*fbdGlobalOptionsCount>FBD_OPT_EVENTS_COUNT)?fbdGlobalOptions[FBD_OPT_EVENTS_COUNT]:0)
 
 // FBD_MODBUS_OPT
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
@@ -516,6 +534,105 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 // 31:
 //  0    - не менять настройки последовательного порта
 //  1    - менять настройки последовательного порта
+
+// -------------------------------------------------------------------------------------------------------
+// События/Журнал
+// -------------------------------------------------------------------------------------------------------
+//
+#ifdef USE_EVENTS
+
+// события в описании схемы (12)
+typedef __packed_struct EventDescription_t {
+    tSignal level;                                              // порог срабатывания               4
+    uint32_t delay;                                             // задержка перед срабатыванием, mc 4
+    tElemIndex elem;                                            // индекс элемента                  2
+    // флаги:                                                                                       2
+    uint16_t conditions : 2;                                    // условие события
+    uint16_t severity : 2;                                      // уровень "серьёзности"
+    uint16_t logged : 1;                                        // требует регистрации в журнале
+} tEventDescription;
+
+// tEventDescription.flags
+// |15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |             Reserve            |LG| Svrt| Cond|
+//
+// 0..1: Cond - Условие возникновения события
+//  00 - значение элемента == "level"
+//  01 - значение элемента != "level"
+//  10 - значение элемента >  "level"
+//  11 - значение элемента <  "level"
+// 2..3: Severity:
+//  00 - Emergency
+//  01 - Warning
+//  10 - Notice
+//  11 - Information
+// 4: Помещать событие в журнал
+
+// условие возникновения события
+enum FBD_EVENT_COND {
+    FBD_EVENT_COND_EQU              = 0,
+    FBD_EVENT_COND_NOTEQU           = 1,
+    FBD_EVENT_COND_GREATER          = 2,
+    FBD_EVENT_COND_LESS             = 3
+};
+// важность события
+enum FBD_EVENT_SEVERITY {
+    FBD_EVENT_SEVERITY_EMERGENCY    = 0,
+    FBD_EVENT_SEVERITY_WARNING      = 1,
+    FBD_EVENT_SEVERITY_NOTICE       = 2,
+    FBD_EVENT_SEVERITY_INFO         = 3
+};
+
+typedef enum FBD_EVENT_SEVERITY tEventSeverity;
+
+// метка времени события/журнала с флагами
+typedef __packed_struct EventTimeFlags_t {
+    uint32_t seconds : 6;                                       // метка времени: секунды (0..59)
+    uint32_t minutes : 6;                                       // метка времени: минуты (0..59)
+    uint32_t hours : 5;                                         // метка времени: часы (0..23)
+    uint32_t day : 5;                                           // метка времени: день (1..31)
+    uint32_t month : 4;                                         // метка времени: месяц (1..12)
+    // флаги:
+    uint32_t occured : 1;                                       // условие события выполнено (1)
+    uint32_t active : 1;                                        // событие активно: условие события выполнено и таймер его задержки истёк (1)
+} tEventTimeFlags;
+
+// статус события
+typedef __packed_struct EventStatus_t {
+    uint32_t timer;                                             // таймер события, mc               4
+    tEventTimeFlags time;                                       // метка времени и флаги            4
+} tEventStatus;
+
+// запись журнала
+typedef __packed_struct LogItem_t {
+    tEventTimeFlags time;                                       // метка времени и флаги            4
+    // TODO: !!!
+} tLogItem;
+
+typedef __packed_struct ActiveEventDescription_t {
+    DESCR_MEM char *caption;                                    // текстовая надпись
+    tEventTimeFlags time;                                       // метка времени и флаги
+    tEventSeverity severity;                                    // важность
+} tActiveEventDescription;
+
+// Возвращает количество событий в проекте, если результат 0, то проект не использует события и журнал.
+tSignal fbdTotalEventsCount(void);
+
+// Получить описание активного события с индексом index
+// Результат выполнения:
+//  false - события с таким индексом нет
+//  true  - активное событие есть, оно помещено в структуру event
+bool fbdGetActiveEvent(tSignal index, tActiveEventDescription *event);
+
+// Получить описание события с индексом index из журнала событий
+// index - индекс записи в журнале событий, 0 - самое новое (последнее)
+// Результат выполнения:
+//  false - события с таким индексом в журнале нет
+//  true  - событие в журнале есть, оно помещено в структуру event
+bool fbdGetLogEvent(tSignal index, tActiveEventDescription *event);
+
+#endif  // USE_EVENTS
 
 #ifdef USE_HMI
 // HMI

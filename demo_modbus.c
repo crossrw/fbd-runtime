@@ -34,7 +34,7 @@ tSignal FBDgetProc(char type, tSignal index)
     timeinfo = localtime (&my_time);
 #ifndef SILENT
     switch(type) {
-    case 0:
+    case FBD_PIN:
         printf(" request InputPin(%ld)\n", index);
         // имитация RTC
         switch(index) {
@@ -53,7 +53,7 @@ tSignal FBDgetProc(char type, tSignal index)
             default:
                 return 0;
         }
-    case 1:
+    case FBD_NVRAM:
         printf(" request NVRAM(%ld)\n", index);
         return 0;
     }
@@ -66,10 +66,10 @@ void FBDsetProc(char type, tSignal index, tSignal *value)
 #ifndef SILENT
     switch(type)
     {
-    case 0:
+    case FBD_PIN:
         printf(" set OutputPin(%ld) to value %ld\n", index, *value);
         break;
-    case 1:
+    case FBD_NVRAM:
         printf(" set NVRAM(%ld) to value %ld\n", index, *value);
         break;
     }
