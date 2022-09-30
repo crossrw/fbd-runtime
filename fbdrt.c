@@ -36,6 +36,9 @@
 // 14-11-2021
 // + Modbus
 
+// 30-09-2022
+// + Задержка между запросами Modbus RTU
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
@@ -247,6 +250,7 @@ tElemIndex fbdModbusTCPCount;
 tElemIndex fbdModbusRTUIndex;
 tElemIndex fbdModbusTCPIndex;
 short      fbdModbusRTUTimer;
+short      fbdModbusRTUDelayTimer;
 short      fbdModbusTCPTimer;
 
 unsigned char fbdModbusRTUErrorCounter;
@@ -557,6 +561,7 @@ void fbdSetMemory(char *buf, bool needReset)
     //
     fbdModbusRTUTimer = 0;
     fbdModbusTCPTimer = 0;
+    fbdModbusRTUDelayTimer = 0;
     //
     fbdModbusRTUCount = 0;
     fbdModbusTCPCount = 0;
@@ -934,6 +939,7 @@ void fbdDoStep(tSignal period)
     memset(fbdFlagsBuf, 0, fbdFlagsByteCount);
     // модификация таймеров Modbus
     if(period) {
+        if(period <= fbdModbusRTUDelayTimer) fbdModbusRTUDelayTimer -= period; else fbdModbusRTUDelayTimer = 0;
         if(period <= fbdModbusRTUTimer) fbdModbusRTUTimer -= period; else fbdModbusRTUTimer = 0;
         if(period <= fbdModbusTCPTimer) fbdModbusTCPTimer -= period; else fbdModbusTCPTimer = 0;
     }
@@ -1088,6 +1094,8 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
     // поиск следующего элемента Modbus RTU
     tElemIndex index, i;
     unsigned char elem;
+    // проверка на паузу между любыми идущими подряд запросами (борьба с Danfoss MCX)
+    if(fbdModbusRTUDelayTimer) return false;
     // проверка необходимости повторного запроса
     if(fbdModbusRTUErrorCounter) {
         // необходим повторный запрос
@@ -1143,6 +1151,7 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
 void fbdSetModbusRTUResponse(tSignal response)
 {
     fbdModbusRTUErrorCounter = 0;
+    fbdModbusRTUDelayTimer = FBD_MODBUSRTU_DELAY;
     setModbusResponse(fbdModbusRTUIndex, response);
 }
 
@@ -1155,6 +1164,7 @@ void fbdSetModbusRTUResponse(tSignal response)
  */
 void fbdSetModbusRTUNoResponse(int errCode)
 {
+    fbdModbusRTUDelayTimer = FBD_MODBUSRTU_DELAY;
     if((errCode != 0) || (fbdModbusRTUErrorCounter == 0)) {
         fbdModbusRTUErrorCounter = 0;
         setModbusNoResponse(fbdModbusRTUIndex);

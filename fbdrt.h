@@ -489,7 +489,8 @@ enum FBD_OPTIONS {
     FBD_OPT_SCHEMA_SIZE     = 5,
     FBD_OPT_HINTS_COUNT     = 6,
     FBD_OPT_MODBUSRTU_OPT   = 7,
-    FBD_OPT_EVENTS_COUNT    = 8
+    FBD_OPT_MODBUSRTU_OPT2  = 8,
+    FBD_OPT_EVENTS_COUNT    = 9
 };
 
 extern DESCR_MEM unsigned char DESCR_MEM_SUFX *fbdGlobalOptionsCount;
@@ -502,8 +503,10 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_SCHEMA_SIZE         ((*fbdGlobalOptionsCount>FBD_OPT_SCHEMA_SIZE)?fbdGlobalOptions[FBD_OPT_SCHEMA_SIZE]:0)
 #define FBD_HINTS_COUNT         ((*fbdGlobalOptionsCount>FBD_OPT_HINTS_COUNT)?fbdGlobalOptions[FBD_OPT_HINTS_COUNT]:0)
 #define FBD_MODBUSRTU_OPT       ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT]:0)
+#define FBD_MODBUSRTU_OPT2      ((*fbdGlobalOptionsCount>FBD_OPT_MODBUSRTU_OPT2)?fbdGlobalOptions[FBD_OPT_MODBUSRTU_OPT2]:0)
 #define FBD_MODBUS_RETRYCOUNT   ((FBD_MODBUSRTU_OPT >> 19) & 3)
 #define FBD_MODBUS_PAUSE        ((FBD_MODBUSRTU_OPT >> 21) & 1023)
+#define FBD_MODBUSRTU_DELAY     (FBD_MODBUSRTU_OPT2 & 255)
 #define FBD_EVENTS_COUNT        ((*fbdGlobalOptionsCount>FBD_OPT_EVENTS_COUNT)?fbdGlobalOptions[FBD_OPT_EVENTS_COUNT]:0)
 
 // FBD_MODBUS_OPT
@@ -534,6 +537,14 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 // 31:
 //  0    - не менять настройки последовательного порта
 //  1    - менять настройки последовательного порта
+
+// FBD_MODBUS_OPT2
+// |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                               Reserve                                 |         Delay         |
+//
+// 0..7:   Задержка между любыми запросами - 0..255, мс
+// 8..31:  Резерв
 
 // -------------------------------------------------------------------------------------------------------
 // События/Журнал
