@@ -1,0 +1,24 @@
+{
+    "C_Cpp.default.compilerPath": "c:/MinGW/bin/gcc.exe",
+    "C_Cpp.default.intelliSenseMode": "windows-gcc-x86",
+    "C_Cpp.default.systemIncludePath": [
+        "c:/MinGW/include"
+    ],
+    "cSpell.words": [
+        "asciiz",
+        "DESCR",
+        "EEPROM",
+        "fbdrt",
+        "lowlimit",
+        "NVRAM",
+        "outpin",
+        "outvar",
+        "Qnext",
+        "setpoint",
+        "Setpoints",
+        "struct",
+        "upperlimit",
+        "watchpoint",
+        "Watchpoints"
+    ]
+}
