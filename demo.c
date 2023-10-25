@@ -211,7 +211,10 @@ int main(void)
         printf("\n\nCURRENT EVENTS LOG:\n");
         for(ei=0; ei<fbdTotalEventsCount(); ei++) {
             if(fbdGetCurrentEvent(ei, &event)) {
-                printf("idx:%3d '%s'\n", ei, event.message);
+
+                printf("idx:%3d se:%u  %2u-%2u %.2u:%.2u:%.2u '%s'\n", ei, event.flags.started, event.flags.day, event.flags.month, event.flags.hours, event.flags.minutes, event.flags.seconds, event.message);
+
+                //printf("idx:%3d '%s'\n", ei, event.message);
             }
         }
 

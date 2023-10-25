@@ -275,8 +275,10 @@ short      fbdCurrentScreen;                    // текущий экран
 unsigned short fbdCurrentScreenTimer;           // таймер текущего экрана
 
 #ifdef USE_EVENTS
-tElemIndex  fbdStartEventLog;                   // указатель на начало журнала
-unsigned char fbdEventActiveFlags[32];          // флаги состояния событий: 256/8
+tElemIndex      fbdStartEventLog;               // указатель на начало журнала
+unsigned char   fbdEventActiveFlags[32];        // флаги состояния событий: 256/8
+tEventFlagsView fbdEventActiveTime[256];        // фиксация начала событий
+
 #endif // USE_EVENTS
 #endif // USE_HMI
 //
@@ -646,6 +648,7 @@ void fbdSetMemory(char *buf, bool needReset)
     fbdCurrentScreenTimer = 0;
     //
 #ifdef USE_EVENTS
+    // очистка флагов событий
     memset(fbdEventActiveFlags, 0, sizeof(fbdEventActiveFlags));
     // если была перезапись схемы, то очищаем журнал
     if(needReset) fbdClearEventLog();
@@ -1339,14 +1342,16 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
             if(index == ei) {
                 // нашли то, что надо
                 eventFlags.value = FBDGETPARAMETER(i, 1);
-                //
-                event->flags.seconds = 0;
-                event->flags.minutes = 0;
-                event->flags.hours = 0;
-                event->flags.month = 0;
-                event->flags.day = 0;
+                // возвращаем зафиксированное время
+                event->flags.seconds = fbdEventActiveTime[index].flags.seconds;
+                event->flags.minutes = fbdEventActiveTime[index].flags.minutes;
+                event->flags.hours = fbdEventActiveTime[index].flags.hours;
+                event->flags.month = fbdEventActiveTime[index].flags.month;
+                event->flags.day = fbdEventActiveTime[index].flags.day;
+                // важность
                 event->flags.severity = eventFlags.flags.severity;
-                event->flags.started = 0;
+                event->flags.started = 1;
+                // указатель на сообщение
                 event->message = fbdHMIgetIOhint(2, eventFlags.flags.imessage);
                 //
                 return true;
@@ -1428,6 +1433,9 @@ void fbdAddLogEvent(tEventDescription eventDescription, char up)
     temp = eventDescription.imessage;
     FBDsetProc(FBD_NVRAM, fbdStartEventLog, &newItem.value);
     FBDsetProc(FBD_NVRAM, fbdStartEventLog+1, &temp);
+    //
+    // если это начало события, то фиксируем его время
+    if(up) fbdEventActiveTime[temp].value = newItem.value;
 }
 
 /**
