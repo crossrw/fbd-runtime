@@ -13,6 +13,6 @@
  * @param gmt Смещение временной зоны в минутах
  * @return tSignal Угол над горизонтом в сотых долях градуса. Положительное значение - солнце над горизонтом, отрицательное значение - солнце под горизонтом.
  */
-tSignal sunPosition(float lat, float lon, time_t unix, int gmt);
+tSignal sunPosition(float lat, float lon, time_t unix);
 
 #endif  // FBDRTSUN_H

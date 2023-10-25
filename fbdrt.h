@@ -12,10 +12,11 @@
 #include <stdbool.h>        // for true/false definition
 #include <stdint.h>         // type definition
 
-// 7 - базовая
-// 8 - поддержка экранов
-// 9 - Modbus
-#define FBD_LIB_VERSION 9
+// 7    - базовая
+// 8    - поддержка экранов
+// 9    - Modbus
+// 10   - журналы и элемент MOD
+#define FBD_LIB_VERSION 10
 
 // описание упакованной структуры
 #if defined ( __CC_ARM   )
@@ -51,18 +52,15 @@
 // нобходимо определить символ USE_HMI если планируете использовать функции HMI
 #define USE_HMI
 //
+#ifdef USE_HMI
 // нобходимо определить символ USE_EVENTS если планируете использовать события и журнал
-// #define USE_EVENTS
+#define USE_EVENTS
+#endif
+
+
 //
 // нобходимо определить символ USE_MATH если планируете использовать генератор sin
 #define USE_MATH
-//
-// SPEED_OPT - оптимизация скорости выполнения за счет увеличения размера необходимого RAM
-// Чем больше схема, тем больше увеличение скорости.
-// На примере waterheating.fbd:
-// - уменьшение времени цикла в 4.9 раза;
-// - увеличение размера RAM c 374 до 870 байт (2.3 раза)
-#define SPEED_OPT
 //
 // максимальный размер стека, используемый при расчете схемы
 // один элемент стека занимает (sizeof(tElemIndex)+1) байт
@@ -86,6 +84,13 @@ typedef int32_t tLongSignal;
 // типы элементов:
 #define ELEMMASK    0x3F
 #define INVERTFLAG  0x40
+#define ELEMENDFLAG 0x80
+//
+// Описание элемента
+// | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+// +---+---+---+---+---+---+---+---+
+// | 0 |INV|     ELEMENT_TYPE      |
+//
 //
 typedef enum {
     ELEM_OUT_PIN =  0,
@@ -123,13 +128,24 @@ typedef enum {
     ELEM_GEN     =  32,
     ELEM_INP_MDBS=  33,
     ELEM_OUT_MDBS=  34,
+    ELEM_MOD     =  35,
+    ELEM_MFUN    =  36,
+    ELEM_EVENT   =  37,
     //
     ELEM_TYPE_COUNT
 } tFBD_ELEMENT_TYPE;
 
 enum FBD_GETSETTYPE {
     FBD_PIN     = 0,            // входной/выходной сигнал
-    FBD_NVRAM   = 1             // значение NVRAM
+    FBD_NVRAM   = 1,            // значение NVRAM
+    FBD_HRDW    = 2             // значение параметра аппаратуры
+};
+
+enum FBD_GETHRDWTYPE {
+    FBD_HRDW_ETH    = 0,        // статус Ethernet
+    FBD_HRDW_NTP    = 1,        // статус NTP
+    FBD_HRDW_TZO    = 2,        // смещение TimeZone в минутах
+    FBD_HRDW_BAT    = 3         // напряжение батареи в 0.01В
 };
 
 //
@@ -321,7 +337,8 @@ enum GP_RTC_PARAMS {
     GP_RTC_SECOND   =  22,
     GP_RTC_DAY      =  23,
     GP_RTC_MONTH    =  24,
-    GP_RTC_YEAR     =  25
+    GP_RTC_YEAR     =  25,
+    GP_RTC_WDAY     =  26               // 1 - понедельник, 2 - вторник ...
 };
 #endif
 
@@ -554,31 +571,36 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 
 // события в описании схемы (12)
 typedef __packed_struct EventDescription_t {
-    tSignal level;                                              // порог срабатывания               4
-    uint32_t delay;                                             // задержка перед срабатыванием, mc 4
-    tElemIndex elem;                                            // индекс элемента                  2
-    // флаги:                                                                                       2
-    uint16_t conditions : 2;                                    // условие события
+    uint16_t imessage : 8;                                      // индекс сообщения
     uint16_t severity : 2;                                      // уровень "серьёзности"
-    uint16_t logged : 1;                                        // требует регистрации в журнале
+    uint16_t logBegin : 1;                                      // требует регистрации в журнале
+    uint16_t logEnd : 1;                                        // требует регистрации в журнале
+    uint16_t conditions : 2;                                    // условие события
 } tEventDescription;
 
+typedef union {
+    tEventDescription flags;
+    tSignal value;
+} tEventDescriptionView;
+
+
 // tEventDescription.flags
-// |15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
-// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// |             Reserve            |LG| Svrt| Cond|
+// |31 |30 |29 |28 |27 |26 |25 |24 |23 |22 |21 |20 |19 |18 |17 |16 |15 |14 |13 |12 |11 |10 | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+// |                                                                       | Cond  |LGB|LGE| Svrt  |           imessage            |
 //
-// 0..1: Cond - Условие возникновения события
+// 12..13: Cond - Условие возникновения события
 //  00 - значение элемента == "level"
 //  01 - значение элемента != "level"
 //  10 - значение элемента >  "level"
 //  11 - значение элемента <  "level"
-// 2..3: Severity:
-//  00 - Emergency
-//  01 - Warning
-//  10 - Notice
-//  11 - Information
-// 4: Помещать событие в журнал
+// 8..9: Severity:
+//  00 - Information
+//  01 - Notice
+//  10 - Warning
+//  11 - Emergency
+// 10: LGE Помещать конец события в журнал
+// 11: LGB Помещать начало события в журнал
 
 // условие возникновения события
 enum FBD_EVENT_COND {
@@ -589,43 +611,42 @@ enum FBD_EVENT_COND {
 };
 // важность события
 enum FBD_EVENT_SEVERITY {
-    FBD_EVENT_SEVERITY_EMERGENCY    = 0,
-    FBD_EVENT_SEVERITY_WARNING      = 1,
-    FBD_EVENT_SEVERITY_NOTICE       = 2,
-    FBD_EVENT_SEVERITY_INFO         = 3
+    FBD_EVENT_SEVERITY_INFO         = 0,
+    FBD_EVENT_SEVERITY_NOTICE       = 1,
+    FBD_EVENT_SEVERITY_WARNING      = 2,
+    FBD_EVENT_SEVERITY_EMERGENCY    = 3
 };
 
 typedef enum FBD_EVENT_SEVERITY tEventSeverity;
 
 // метка времени события/журнала с флагами
-typedef __packed_struct EventTimeFlags_t {
+typedef __packed_struct EventFlags_t {
     uint32_t seconds : 6;                                       // метка времени: секунды (0..59)
     uint32_t minutes : 6;                                       // метка времени: минуты (0..59)
     uint32_t hours : 5;                                         // метка времени: часы (0..23)
     uint32_t day : 5;                                           // метка времени: день (1..31)
     uint32_t month : 4;                                         // метка времени: месяц (1..12)
-    // флаги:
-    uint32_t occured : 1;                                       // условие события выполнено (1)
-    uint32_t active : 1;                                        // событие активно: условие события выполнено и таймер его задержки истёк (1)
-} tEventTimeFlags;
+    uint32_t severity : 2;                                      // важность
+    uint32_t started : 1;                                       // начало события
+    uint32_t sign : 3;                                          // признак наличия события: 101
+} tEventFlags;
 
-// статус события
-typedef __packed_struct EventStatus_t {
-    uint32_t timer;                                             // таймер события, mc               4
-    tEventTimeFlags time;                                       // метка времени и флаги            4
-} tEventStatus;
+typedef union {
+    tEventFlags flags;
+    tSignal value;
+} tEventFlagsView;
 
-// запись журнала
-typedef __packed_struct LogItem_t {
-    tEventTimeFlags time;                                       // метка времени и флаги            4
-    // TODO: !!!
-} tLogItem;
 
-typedef __packed_struct ActiveEventDescription_t {
-    DESCR_MEM char *caption;                                    // текстовая надпись
-    tEventTimeFlags time;                                       // метка времени и флаги
-    tEventSeverity severity;                                    // важность
-} tActiveEventDescription;
+// Запись журнала в NVRAM занимает 2 32-х битных слова:
+//    |31 |30 |29 |28 |27 |26 |25 |24 |23 |22 |21 |20 |19 |18 |17 |16 |15 |14 |13 |12 |11 |10 | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+//    +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+// 0  |   Sign    | SE| Svrt  |     Month     |        Day        |       Hour        |        Minutes        |        Seconds        |
+// 1  |                                         Reserve                                               |           imessage            |
+
+typedef struct {
+    tEventFlags flags;
+    DESCR_MEM char DESCR_MEM_SUFX *message;
+} tEventLogItem;
 
 // Возвращает количество событий в проекте, если результат 0, то проект не использует события и журнал.
 tSignal fbdTotalEventsCount(void);
@@ -634,14 +655,17 @@ tSignal fbdTotalEventsCount(void);
 // Результат выполнения:
 //  false - события с таким индексом нет
 //  true  - активное событие есть, оно помещено в структуру event
-bool fbdGetActiveEvent(tSignal index, tActiveEventDescription *event);
+bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event);
 
 // Получить описание события с индексом index из журнала событий
 // index - индекс записи в журнале событий, 0 - самое новое (последнее)
 // Результат выполнения:
 //  false - события с таким индексом в журнале нет
 //  true  - событие в журнале есть, оно помещено в структуру event
-bool fbdGetLogEvent(tSignal index, tActiveEventDescription *event);
+bool fbdGetLogEvent(tSignal index, tEventLogItem *event);
+
+// Очистка журнала событий
+void fbdClearEventLog();
 
 #endif  // USE_EVENTS
 

@@ -2,16 +2,22 @@
  * @file fbdrt.c
  * @author crossrw1@gmail.com
  * @brief FBD-Runtime library
- * @version 9.0
+ * @version 10.0
  * @date 2021-11-17
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include "fbdrt.h"
 
 #ifdef USE_HMI
-// для snprintf
-#include <stdio.h>
+    // для snprintf
+    #include <stdio.h>
+#endif
+
+#ifdef USE_MATH
+    // астротаймер
+    #include "fbdsun.h"
 #endif
 
 // 06-01-2018
@@ -39,6 +45,12 @@
 // 30-09-2022
 // + Задержка между запросами Modbus RTU
 
+// 25-10-2023
+// + SPEED_OPT больше не используется
+// + добавлен элемент MOD
+// + добавлен элемент MFUN
+// + события
+
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
 // -----------------------------------------------------------------------------
@@ -47,7 +59,7 @@
  * @brief Чтение значения входного сигнала или NVRAM.
  * Должна быть описана в основной программе.
  * 
- * @param type Tип чтения: FBD_PIN - входной сигнал, FBD_NVRAM - значение NVRAM
+ * @param type Tип чтения: FBD_PIN - входной сигнал, FBD_NVRAM - значение NVRAM, FBD_HRDW - значение параметра аппаратуры
  * @param index Индекс читаемого значения
  * @return tSignal Прочитанное значение сигнала
  */
@@ -88,9 +100,6 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value);
 
 #ifdef USE_HMI
 DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex);
-#ifndef SPEED_OPT
-DESCR_MEM char DESCR_MEM_SUFX * DESCR_MEM_SUFX fbdGetCaption(tElemIndex index);
-#endif
 #endif
 
 #if defined(BIG_ENDIAN) && (SIGNAL_SIZE > 1)
@@ -124,6 +133,10 @@ char getCalcFlag(tElemIndex element);
 char getRiseFlag(tElemIndex element);
 
 tSignal intAbs(tSignal val);
+
+#ifdef USE_EVENTS
+void fbdAddLogEvent(tEventDescription eventDescription, char up);
+#endif
 
 // ----------------------------------------------------------
 // массив описания схемы (расположен в ROM или RAM)
@@ -160,7 +173,8 @@ DESCR_MEM tScreen DESCR_MEM_SUFX *fbdScreensBuf;
 // screen0
 // screen1
 // ...
-// текстовые описания входов и выходов, количество указано в параметре FBD_OPT_HINTS_COUNT
+// текстовые описания входов, выходов и событий, количество указано в параметре FBD_OPT_HINTS_COUNT
+// type: 0 - вход, 1 - выход, 2 - событие
 DESCR_MEM char DESCR_MEM_SUFX *fbdIOHints;
 // type(char), index(char), text, 0
 // type(char), index(char), text, 0
@@ -204,8 +218,6 @@ char *fbdChangeModbusBuf;
 //  ...
 //  ChangeModbusN
 
-#ifdef SPEED_OPT
-// только при использовании оптимизации по скорости выполнения
 tOffset *inputOffsets;
 //  Смещение входа 0 элемента 0
 //  Смещение входа 0 элемента 1
@@ -232,12 +244,11 @@ typedef struct pointaccess_t {
 tPointAccess *wpOffsets;
 tPointAccess *spOffsets;
 #endif // USE_HMI
-// указатели для быстрого доступа к тектовым описаниям проекта
+// указатели для быстрого доступа к текстовым описаниям проекта
 DESCR_MEM char *fbdCaptionName;
 DESCR_MEM char *fbdCaptionVersion;
 DESCR_MEM char *fbdCaptionBTime;
 //
-#endif // SPEED_OPT
 
 tElemIndex fbdElementsCount;
 tElemIndex fbdStorageCount;
@@ -252,6 +263,7 @@ tElemIndex fbdModbusTCPIndex;
 short      fbdModbusRTUTimer;
 short      fbdModbusRTUDelayTimer;
 short      fbdModbusTCPTimer;
+short      fbdLastScreenIndex;
 
 unsigned char fbdModbusRTUErrorCounter;
 unsigned char fbdModbusTCPErrorCounter;
@@ -259,20 +271,25 @@ unsigned char fbdModbusTCPErrorCounter;
 #ifdef USE_HMI
 tElemIndex fbdWpCount;
 tElemIndex fbdSpCount;
-short      fbdCurrentScreen;                 // текущий экран
-unsigned short fbdCurrentScreenTimer;        // таймер текущего экрана
+short      fbdCurrentScreen;                    // текущий экран
+unsigned short fbdCurrentScreenTimer;           // таймер текущего экрана
+
+#ifdef USE_EVENTS
+tElemIndex  fbdStartEventLog;                   // указатель на начало журнала
+unsigned char fbdEventActiveFlags[32];          // флаги состояния событий: 256/8
+#endif // USE_EVENTS
 #endif // USE_HMI
 //
 char fbdFirstFlag;
 
 // массив с количествами входов для элементов каждого типа
-ROM_CONST uint8_t ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1};
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1,2,0,1};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST uint8_t ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2};
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2,0,4,2};
 // массив с количествами хранимых данных для элементов каждого типа
-ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0};
-//                                                                           0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3
-//                                                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0};
+//                                                                           0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3
+//                                                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
 // Параметры элемента ELEM_INP_MDBS (чтение Modbus)
 //
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
@@ -332,47 +349,11 @@ ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0
 //  1111    - 32
 //
 
-#ifdef SPEED_OPT
 // описания "быстрых" вариантов функций
 // --------------------------------------------------------------------------------------------
 #define FBDINPUTOFFSET(index) *(inputOffsets + (index))
 #define FBDGETPARAMETER(element,index) SIGNAL_BYTE_ORDER(fbdParametersBuf[*(parameterOffsets+element)+index])
 #define FBDGETSTORAGE(element,index) fbdStorageBuf[*(storageOffsets+element)+index]
-
-#else // SPEED_OPT
-// описания "медленных" вариантов функций
-// --------------------------------------------------------------------------------------------
-// расчет смещения на первый вход элемента
-#define FBDINPUTOFFSET(index) _fbdInputOffset(index)
-tOffset _fbdInputOffset(tElemIndex index)
-{
-    tElemIndex i = 0;
-    tOffset offset = 0;
-    //
-    while (i < index) offset += FBDdefInputsCount[fbdDescrBuf[i++] & ELEMMASK];
-    return offset;
-}
-// получить значение параметра элемента
-#define FBDGETPARAMETER(element,index) _fbdGetParameter(element,index)
-tSignal _fbdGetParameter(tElemIndex element, unsigned char index)
-{
-    tElemIndex elem = 0;
-    tOffset offset = 0;
-    //
-    while (elem < element) offset += FBDdefParametersCount[fbdDescrBuf[elem++] & ELEMMASK];
-    return SIGNAL_BYTE_ORDER(fbdParametersBuf[offset + index]);
-}
-// получить хранимое значение для элемента
-#define FBDGETSTORAGE(element,index) _fbdGetStorage(element,index)
-tSignal _fbdGetStorage(tElemIndex element, unsigned char index)
-{
-    tElemIndex elem = 0;
-    tOffset offset = 0;
-    //
-    while (elem<element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
-    return fbdStorageBuf[offset + index];
-}
-#endif // SPEED_OPT
 
 /**
  * @brief Расчёт контрльной суммы CRC32
@@ -438,7 +419,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     // цикл по всем элементам
     while(1) {
         elem = fbdDescrBuf[fbdElementsCount];
-        if(elem & 0x80) break;
+        if(elem & ELEMENDFLAG) break;
         elem &= ELEMMASK;
         if(elem >= ELEM_TYPE_COUNT) return ERR_INVALID_ELEMENT_TYPE;
         // подсчет всех входов
@@ -510,6 +491,13 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         }
         fbdIOHints = (DESCR_MEM char DESCR_MEM_SUFX *)screen;
     }
+    //
+#ifdef USE_EVENTS
+    // указатель на начало журнала
+    fbdStartEventLog = fbdStorageCount;
+    // должен быть чётным
+    if(fbdStartEventLog & 1) fbdStartEventLog++;
+#endif // USE_EVENTS
 #endif // USE_HMI
     //
     // память для флагов расчета и фронта
@@ -519,15 +507,11 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     // память для флагов изменений значения записи в Modbus
     fbdChangeModbusByteCount = (fbdChangeModbusByteCount>>3) + ((fbdChangeModbusByteCount&7)?1:0);
     //
-#ifdef SPEED_OPT
 #ifdef USE_HMI
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
 #else  // USE_HMI
     return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset);
 #endif // USE_HMI
-#else  // SPEED_OPT
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount;
-#endif // SPEED_OPT
 }
 
 /**
@@ -543,7 +527,6 @@ void fbdSetMemory(char *buf, bool needReset)
 #ifdef USE_HMI
     tHMIdata hmiData;
 #endif // USE_HMI
-#ifdef SPEED_OPT
     tOffset curInputOffset = 0;
     tOffset curParameterOffset = 0;
     tOffset curStorageOffset = 0;
@@ -552,7 +535,6 @@ void fbdSetMemory(char *buf, bool needReset)
     tOffset curSP = 0;
     DESCR_MEM char DESCR_MEM_SUFX *curCap;
 #endif // USE_HMI
-#endif // SPEED_OPT
     fbdModbusRTUIndex = MAX_INDEX;
     fbdModbusTCPIndex = MAX_INDEX;
     //
@@ -587,7 +569,6 @@ void fbdSetMemory(char *buf, bool needReset)
             fbdStorageBuf[i] = FBDgetProc(FBD_NVRAM, i);
         }
     }
-#ifdef SPEED_OPT
     // инициализация буферов быстрого доступа
     inputOffsets = (tOffset *)(fbdChangeModbusBuf + fbdChangeModbusByteCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
@@ -629,7 +610,6 @@ void fbdSetMemory(char *buf, bool needReset)
         }
 #endif // USE_HMI
     }
-#endif // SPEED_OPT
     // подсчёт количества элементов Modbus и инициализация значений чтения Modbus
     // цикл по всем элементам
     for(i=0; i < fbdElementsCount; i++) {
@@ -664,6 +644,12 @@ void fbdSetMemory(char *buf, bool needReset)
     //
     fbdCurrentScreen = -1;
     fbdCurrentScreenTimer = 0;
+    //
+#ifdef USE_EVENTS
+    memset(fbdEventActiveFlags, 0, sizeof(fbdEventActiveFlags));
+    // если была перезапись схемы, то очищаем журнал
+    if(needReset) fbdClearEventLog();
+#endif // USE_EVENTS
 #endif // USE_HMI
     //
     fbdFirstFlag = 1;
@@ -893,6 +879,8 @@ void fbdDoStepEx(tSignal period, short screenIndex)
 {
     DESCR_MEM tScreen DESCR_MEM_SUFX *screen;
     int i;
+    //
+    fbdLastScreenIndex = screenIndex;
     // расчет схемы
     fbdDoStep(period);
     // проверка корректности номера экрана
@@ -933,6 +921,12 @@ void fbdDoStepEx(tSignal period, short screenIndex)
  */
 void fbdDoStep(tSignal period)
 {
+#ifdef USE_EVENTS
+    tEventDescriptionView eventFlags;
+    unsigned char imessage;
+    bool eventActive;
+    bool eventCondMet;
+#endif
     tSignal value, param;
     tElemIndex index;
     // сброс признаков расчета и нарастающего фронта
@@ -970,11 +964,59 @@ void fbdDoStep(tSignal period)
             case ELEM_OUT_MDBS:                                             // запись Modbus
 #ifdef USE_HMI
             case ELEM_WP:                                                   // точка контроля
+            case ELEM_EVENT:                                                // запись журнала
 #endif // USE_HMI
                 fbdCalcElement(index);
+                //
+#ifdef USE_EVENTS
+                if(element == ELEM_EVENT) {
+                    //
+                    value = FBDGETPARAMETER(index, 0);
+                    eventFlags.value = FBDGETPARAMETER(index, 1);
+                    imessage = eventFlags.flags.imessage;
+                    eventActive = (fbdEventActiveFlags[imessage>>3]&(1u<<(imessage&7))) != 0;
+                    //
+                    switch (eventFlags.flags.conditions) {
+                        case FBD_EVENT_COND_EQU:
+                            eventCondMet = (fbdMemoryBuf[index] == value);
+                            break;
+                        case FBD_EVENT_COND_NOTEQU:
+                            eventCondMet = (fbdMemoryBuf[index] != value);
+                            break;
+                        case FBD_EVENT_COND_GREATER:
+                            eventCondMet = (fbdMemoryBuf[index] > value);
+                            break;
+                        case FBD_EVENT_COND_LESS:
+                            eventCondMet = (fbdMemoryBuf[index] < value);
+                            break;
+                        default:
+                            eventCondMet = false;
+                    }
+                    //
+                    if(eventCondMet != eventActive) {
+                        // событие изменило своё состояние
+                        if(eventCondMet) {
+                            // событие стало активным
+                            if((eventFlags.flags.logBegin)) {
+                                fbdAddLogEvent(eventFlags.flags, 1);
+                            }
+                            // ставим флаг активности события
+                            fbdEventActiveFlags[imessage>>3] |= 1u<<(imessage&7);
+                        } else {
+                            // событие перестало быть активным
+                            if((eventFlags.flags.logEnd)) {
+                                fbdAddLogEvent(eventFlags.flags, 0);
+                            }
+                            // снимаем флаг активности события
+                            fbdEventActiveFlags[imessage>>3] &= ~(1u<<(imessage&7));
+                        }
+                    }
+                }
+#endif // USE_EVENT
                 break;
         }
     }
+    //
     fbdFirstFlag = 0;
 }
 
@@ -1271,53 +1313,125 @@ tSignal fbdTotalEventsCount(void)
 }
 
 /**
- * @brief TODO: Получить описание активного события с указанным индексом
+ * @brief Получить описание активного события с указанным индексом
  * 
- * @param index Индекс события (0..)
+ * @param index Индекс события (0..fbdTotalEventsCount())
  * @param event Указатель на структуру описания активного события
  * @return true Событие есть, оно помещено в структуру event
- * @return false События с таким (и большими) индексом нет
+ * @return false События с таким индексом нет
  */
-bool fbdGetActiveEvent(tSignal index, tActiveEventDescription *event)
+bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
 {
+    if(index >= FBD_EVENTS_COUNT) return false;
+    // проверка флага активности
+    if(!(fbdEventActiveFlags[index>>3]&(1u<<(index&7)))) return false;
+    //
+    // событие активно, ищем элемент ELEM_EVENT
+    tElemIndex i, ei;
+    unsigned char elem;
+    tEventDescriptionView eventFlags;
+    //
+    ei = 0;
+    for(i=0; i < fbdElementsCount; i++) {
+        elem = fbdDescrBuf[i] & ELEMMASK;
+        if(elem == ELEM_EVENT) {
+            // нашли очередное событие, смотрим на его номер
+            if(index == ei) {
+                // нашли то, что надо
+                eventFlags.value = FBDGETPARAMETER(index, 1);
+                //
+                event->flags.seconds = 0;
+                event->flags.minutes = 0;
+                event->flags.hours = 0;
+                event->flags.month = 0;
+                event->flags.day = 0;
+                event->flags.severity = eventFlags.flags.severity;
+                event->flags.started = 0;
+                event->message = fbdHMIgetIOhint(2, eventFlags.flags.imessage);
+                //
+                return true;
+            } else {
+                ei++;
+            }
+        }
+    }
     return false;
 }
 
 /**
- * @brief TODO: Получить описание события из журнала
+ * @brief Получить описание события из журнала
  * 
  * @param index Индекс записи в журнале событий, 0 - самое новое (последнее)
  * @param event Указатель на структуру описания события журнала
  * @return true Событие есть, оно помещено в структуру event
  * @return false События с таким индексом (и большими) в журнале нет
  */
-bool fbdGetLogEvent(tSignal index, tActiveEventDescription *event)
+bool fbdGetLogEvent(tSignal index, tEventLogItem *event)
 {
-    return false;
+    // проверка на границу
+    if(index > (MAXNVRAMINDEX + 1 - fbdStartEventLog) / 2) return false;
+    // флаги
+    tEventFlagsView eventFlags;
+    eventFlags.value  = FBDgetProc(FBD_NVRAM, fbdStartEventLog + index*2);
+    // проверка сигнатуры
+    if(eventFlags.flags.sign != 5) return false;
+    //
+    event->flags = eventFlags.flags;
+    event->message = fbdHMIgetIOhint(2, FBDgetProc(FBD_NVRAM, fbdStartEventLog + index*2 + 1) & 255);
+    return true;
+}
+
+/**
+ * @brief Добавление события в журнал
+ * 
+ * @param eventFlags Событие с флагами
+ * @param up Событие стало активным
+ */
+void fbdAddLogEvent(tEventDescription eventDescription, char up)
+{
+    // сдвиг хвоста журнала
+    tSignal temp;
+    int i = MAXNVRAMINDEX-1;
+    while(1) {
+        temp = FBDgetProc(FBD_NVRAM, i-2);
+        FBDsetProc(FBD_NVRAM, i, &temp);
+        temp = FBDgetProc(FBD_NVRAM, i-1);
+        FBDsetProc(FBD_NVRAM, i+1, &temp);
+        //
+        i = i - 2;
+        if(i <= fbdStartEventLog) break;
+    }
+    //
+    // добавление нового события в начало журнала
+    tEventFlagsView newItem;
+    newItem.flags.seconds = FBDgetProc(FBD_PIN, GP_RTC_SECOND);
+    newItem.flags.minutes = FBDgetProc(FBD_PIN, GP_RTC_MINUTE);
+    newItem.flags.hours = FBDgetProc(FBD_PIN, GP_RTC_HOUR);
+    newItem.flags.day = FBDgetProc(FBD_PIN, GP_RTC_DAY);
+    newItem.flags.month = FBDgetProc(FBD_PIN, GP_RTC_MONTH);
+    newItem.flags.severity = eventDescription.severity;
+    newItem.flags.started = up;
+    newItem.flags.sign = 5;
+    //
+    temp = eventDescription.imessage;
+    FBDsetProc(FBD_NVRAM, fbdStartEventLog, &newItem.value);
+    FBDsetProc(FBD_NVRAM, fbdStartEventLog+1, &temp);
+}
+
+/**
+ * @brief Очистка журнала событий
+ */
+void fbdClearEventLog()
+{
+    tSignal zero = 0;
+    for(int i = fbdStartEventLog; i <= MAXNVRAMINDEX; i++) {
+        FBDsetProc(FBD_NVRAM, i, &zero);
+    }
 }
 
 #endif  // USE_EVENTS
 
 #ifdef USE_HMI
-#ifndef SPEED_OPT
-// -------------------------------------------------------------------------------------------------------
-bool fbdGetElementIndex(tSignal index, unsigned char type, tElemIndex *elemIndex)
-{
-    unsigned char elem;
-    //
-    *elemIndex = 0;
-    while(1) {
-        elem = fbdDescrBuf[*elemIndex];
-        if(elem & 0x80) return false;
-        if(elem == type) {
-            if(index) index--; else break;
-        }
-        (*elemIndex)++;
-    }
-    return true;
-}
-#endif // SPEED_OPT
-
 // -------------------------------------------------------------------------------------------------------
 // HMI functions
 
@@ -1333,13 +1447,8 @@ bool fbdHMIgetSP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex;
     if(index >= fbdSpCount) return false;
-#ifdef SPEED_OPT
     elemIndex = (spOffsets + index)->index;
     pnt->caption = (spOffsets + index)->caption;
-#else
-    if(!fbdGetElementIndex(index, ELEM_SP, &elemIndex)) return false;
-    pnt->caption = fbdGetCaption(elemIndex);
-#endif // SPEED_OPT
     pnt->value = FBDGETSTORAGE(elemIndex, 0);
     pnt->lowlimit = FBDGETPARAMETER(elemIndex, 0);
     pnt->upperLimit = FBDGETPARAMETER(elemIndex, 1);
@@ -1359,11 +1468,7 @@ void fbdHMIsetSP(tSignal index, tSignal value)
 {
     tElemIndex elemIndex;
     if(index >= fbdSpCount) return;
-#ifdef SPEED_OPT
     elemIndex = (spOffsets + index)->index;
-#else
-    if(!fbdGetElementIndex(index, ELEM_SP, &elemIndex)) return;
-#endif // SPEED_OPT
     fbdSetStorage(elemIndex, 0, value);
 }
 
@@ -1379,13 +1484,8 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
 {
     tElemIndex elemIndex = 0;
     if(index >= fbdWpCount) return false;
-#ifdef SPEED_OPT
     elemIndex = (wpOffsets + index)->index;
     pnt->caption = (wpOffsets + index)->caption;
-#else
-    if(!fbdGetElementIndex(index, ELEM_WP, &elemIndex)) return false;
-    pnt->caption = fbdGetCaption(elemIndex);
-#endif // SPEED_OPT
     pnt->value = fbdMemoryBuf[elemIndex];
     pnt->divider = FBDGETPARAMETER(elemIndex, 0);
     return true;
@@ -1399,22 +1499,16 @@ bool fbdHMIgetWP(tSignal index, tHMIdata *pnt)
  */
 void fbdHMIgetDescription(tHMIdescription *pnt)
 {
-#ifdef SPEED_OPT
     pnt->name = fbdCaptionName?fbdCaptionName:(fbdCaptionName = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount));
     pnt->version = fbdCaptionVersion?fbdCaptionVersion:(fbdCaptionVersion = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1));
     pnt->btime = fbdCaptionBTime?fbdCaptionBTime:(fbdCaptionBTime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2));
-#else
-    pnt->name = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount);
-    pnt->version = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 1);
-    pnt->btime = fbdGetCaptionByIndex(fbdWpCount + fbdSpCount + 2);
-#endif
 }
 
 /**
  * @brief Получение указателя на текстовое описание (хинт) входа или выхода.
  * Возвращает указатель на текстовое описание (хинт) входа или выхода, если такого описание не найдено, то возвращает NULL.
  * Значение параметра index соответствует значению параметра index функций FBDgetProc(type, index) и FBDsetProc(type, index, *value).
- * @param type Тип: 0 - входы, 1 - выходы.
+ * @param type Тип: 0 - входы, 1 - выходы, 2 - события
  * @param index Индекс входа или выхода
  * @return DESCR_MEM* Указатель на текстовое описание входа или выхода
  */
@@ -1453,27 +1547,24 @@ DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaptionByIndex(tElemIndex captionIndex)
     return &fbdCaptionsBuf[offset];
 }
 
-#ifndef SPEED_OPT
-// -------------------------------------------------------------------------------------------------------
-// расчет указателя на текстовое описание элемента по индексу элемента
-DESCR_MEM char DESCR_MEM_SUFX * fbdGetCaption(tElemIndex elemIndex)
-{
-    tElemIndex captionIndex, index;
-    //
-    index = 0;
-    captionIndex = 0;
-    while(index < elemIndex) {
-        switch(fbdDescrBuf[index++] & ELEMMASK) {
-            case ELEM_WP:
-            case ELEM_SP:
-                captionIndex++;
-                break;
-        }
-    }
-    return fbdGetCaptionByIndex(captionIndex);
-}
-#endif // SPEED_OPT
 #endif // USE_HMI
+
+// -------------------------------------------------------------------------------------------------------
+
+/**
+ * @brief Проверка нахождения текущего времени RTC в указанном диапазоне
+ * 
+ * @param timeOn Время включения
+ * @param timeOff Время выключения
+ * @return tSignal 
+ */
+tSignal checkTimeInRange(tSignal timeOn, tSignal timeOff)
+{
+    tSignal now;
+    now = FBDgetProc(FBD_PIN, GP_RTC_HOUR)*3600 + FBDgetProc(FBD_PIN, GP_RTC_MINUTE)*60 + FBDgetProc(FBD_PIN, GP_RTC_SECOND);
+    if((now >= timeOn) && (now <= timeOff)) return 1;
+    return 0;
+}
 
 // -------------------------------------------------------------------------------------------------------
 
@@ -1491,6 +1582,7 @@ void fbdCalcElement(tElemIndex curIndex)
     tOffset baseInput;                          //
     tElemIndex inpIndex;
     tSignal s1,s2,s3,s4,v;                      // значения сигналов на входе
+    struct tm local_time;
     //
     if(getCalcFlag(curIndex)) return;           // элемент уже рассчитан?
     //
@@ -1539,8 +1631,9 @@ void fbdCalcElement(tElemIndex curIndex)
             // вычисляем значение текущего элемента, результат в s1
             //
             switch(fbdDescrBuf[curIndex] & ELEMMASK) {
-                case ELEM_OUT_PIN:                                                      // OUTPUT PIN
                 case ELEM_WP:                                                           // HMI watchpoint
+                case ELEM_EVENT:                                                        // EVENT
+                case ELEM_OUT_PIN:                                                      // OUTPUT PIN
                     break;
                 case ELEM_OUT_VAR:                                                      // OUTPUT VAR
                     // при изменении значения сигнала ставим флаг
@@ -1595,6 +1688,114 @@ void fbdCalcElement(tElemIndex curIndex)
                     if(!s2) {
                         if(s1 > 0) s1 = MAX_SIGNAL; else if(s1 < 0) s1 = MIN_SIGNAL; else s1 = 1;
                     } else s1 /= s2;
+                    break;
+                case ELEM_MOD:                                                          // MOD
+                    if(s2) s1 %= s2;
+                    break;
+                case ELEM_MFUN:                                                         // MFUN
+                    // тип многофункционального элемента
+                    switch (FBDGETPARAMETER(curIndex, 0) & 0x000000ff) {
+                        case 0:
+                            // сигнал начального сброса после запуска схемы
+                            s1 = fbdFirstFlag;
+                            break;
+                        case 1:
+                            // случайное число: 0..7FFFFFFF
+                            s1 = rand();
+                            break;
+                        case 2:
+                            // статус Ethernet
+                            s1 = FBDgetProc(FBD_HRDW, FBD_HRDW_ETH);
+                            break;
+                        case 3:
+                            // статус NTP
+                            s1 = FBDgetProc(FBD_HRDW, FBD_HRDW_NTP);
+                            break;
+                        case 4:
+                            // статус батареи
+                            s1 = FBDgetProc(FBD_HRDW, FBD_HRDW_BAT);
+                            break;
+                        case 5:
+                            // индекс текущего экрана
+                            s1 = fbdLastScreenIndex;
+                            break;
+                        case 6:
+                            {
+                            // астро-таймер
+                            // FBDGETPARAMETER(curIndex, 1)  - широта
+                            // FBDGETPARAMETER(curIndex, 2)  - долгота
+#ifdef USE_MATH
+                            //
+                            local_time.tm_year = FBDgetProc(FBD_PIN, GP_RTC_YEAR) - 1900;
+                            local_time.tm_mon  = FBDgetProc(FBD_PIN, GP_RTC_MONTH) - 1;
+                            local_time.tm_mday = FBDgetProc(FBD_PIN, GP_RTC_DAY);
+                            //
+                            local_time.tm_hour = FBDgetProc(FBD_PIN, GP_RTC_HOUR);
+                            local_time.tm_min  = FBDgetProc(FBD_PIN, GP_RTC_MINUTE);
+                            local_time.tm_sec  = FBDgetProc(FBD_PIN, GP_RTC_SECOND);
+                            local_time.tm_isdst = 0;
+                            time_t utcTime = mktime(&local_time);
+                            //
+                            utcTime -= FBDgetProc(FBD_HRDW, FBD_HRDW_TZO)*60;
+                            //
+                            s1 = sunPosition(FBDGETPARAMETER(curIndex, 1) / 10000.0, FBDGETPARAMETER(curIndex, 2) / 10000.0, utcTime);
+#else
+                            s1 = 0;
+#endif
+                            }
+                            break;
+                        case 7:
+                            // элемент недельного календаря
+                            // FBDGETPARAMETER(curIndex, 1)  - время включения
+                            // FBDGETPARAMETER(curIndex, 2)  - время выключения
+                            // FBDGETPARAMETER(curIndex, 3)  - дни недели
+                            //
+                            // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+                            // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+                            // |                                   Резерв                                 |Вс Сб Пт Чт Ср Вт Пн|
+                            //
+                            if(FBDGETPARAMETER(curIndex, 3) & (1u<<(FBDgetProc(FBD_PIN, GP_RTC_WDAY)-1))){
+                                // день недели совпадает
+                                // проверка времени
+                                s1 = checkTimeInRange(FBDGETPARAMETER(curIndex, 1), FBDGETPARAMETER(curIndex, 2));
+                            } else s1 = 0;
+                            break;
+                        case 8:
+                            // элемент месячного календаря
+                            // FBDGETPARAMETER(curIndex, 1)  - время включения
+                            // FBDGETPARAMETER(curIndex, 2)  - время выключения
+                            // FBDGETPARAMETER(curIndex, 3)  - дни месяца
+                            //
+                            // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+                            // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+                            // |  |31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1|
+                            //
+                            if(FBDGETPARAMETER(curIndex, 3) & (1u<<(FBDgetProc(FBD_PIN, GP_RTC_DAY)-1))){
+                                // день месяца совпадает
+                                // проверка времени
+                                s1 = checkTimeInRange(FBDGETPARAMETER(curIndex, 1), FBDGETPARAMETER(curIndex, 2));
+                            } else s1 = 0;
+                            break;
+                        case 9:
+                            // элемент годового календаря
+                            // FBDGETPARAMETER(curIndex, 1)  - время включения
+                            // FBDGETPARAMETER(curIndex, 2)  - время выключения
+                            // FBDGETPARAMETER(curIndex, 3)  - день/месяц
+                            //
+                            // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+                            // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+                            // |                                  Резерв                            |   Месяц   |     День     |
+                            //
+                            if(((FBDGETPARAMETER(curIndex, 3) & 0x1f) + 1) == FBDgetProc(FBD_PIN, GP_RTC_DAY) && (((FBDGETPARAMETER(curIndex, 3) >> 5) & 0x0f) + 1) == FBDgetProc(FBD_PIN, GP_RTC_MONTH)){
+                                // день и месяц совпадают
+                                // проверка времени
+                                s1 = checkTimeInRange(FBDGETPARAMETER(curIndex, 1), FBDGETPARAMETER(curIndex, 2));
+                            } else s1 = 0;
+                            break;
+                        default:
+                            s1 = 0;
+                            break;
+                    }
                     break;
                 case ELEM_TON:                                                          // TIMER TON
                     // s1 - D
@@ -1707,7 +1908,7 @@ void fbdCalcElement(tElemIndex curIndex)
                                     s1 = (s3 > (s1>>1))?0:s2;
                                     break;
                                 case 1:                                 // пила
-#ifdef USE_MATH                                
+#ifdef USE_MATH
                                     s1 = roundl(1.0*s2*(s1-s3)/s1);
 #else
                                     s1 = (s2*(s1-s3))/s1;
@@ -1768,15 +1969,7 @@ void fbdCalcElement(tElemIndex curIndex)
  */
 void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
 {
-#ifdef SPEED_OPT
     tOffset offset = *(storageOffsets + element) + index;
-#else
-    tOffset offset = 0;
-    tElemIndex elem = 0;
-    //
-    while (elem < element) offset += FBDdefStorageCount[fbdDescrBuf[elem++] & ELEMMASK];
-    offset += index;
-#endif // SPEED_OPT
     if(fbdStorageBuf[offset] != value) {
         fbdStorageBuf[offset] = value;
         FBDsetProc(FBD_NVRAM, offset, &fbdStorageBuf[offset]);
@@ -2164,7 +2357,7 @@ inline tSignal intAbs(tSignal val)
 }
 
 /**
- * @brief Возвращает значение у кторого установлены count младших бит.
+ * @brief Возвращает значение у которого установлены count младших бит.
  * 
  * @param count Количество бит
  * @return uint32_t Результат

@@ -15,10 +15,9 @@
  * @param lat Широта
  * @param lon Долгота
  * @param unix Текущее время
- * @param gmt Смещение временной зоны в минутах
  * @return tSignal Угол над горизонтом в сотых долях градуса. Положительное значение - солнце над горизонтом, отрицательное значение - солнце под горизонтом.
  */
-tSignal sunPosition(float lat, float lon, time_t unix, int gmt) {
+tSignal sunPosition(float lat, float lon, time_t unix) {
     lat = RADIANS(lat);
     float hours = (unix % 86400ul) / 86400.0;       // decimal hours
     float JulCent = (unix / 86400.0 - 10957.5) / 36525.0;                                                                   // Julian Century
