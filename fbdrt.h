@@ -657,6 +657,9 @@ tSignal fbdTotalEventsCount(void);
 //  true  - активное событие есть, оно помещено в структуру event
 bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event);
 
+// Подтверждение (сброс) текущего события
+void fbdConfirmCurrentEvent(tSignal index);
+
 // Получить описание события с индексом index из журнала событий
 // index - индекс записи в журнале событий, 0 - самое новое (последнее)
 // Результат выполнения:

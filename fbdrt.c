@@ -1338,7 +1338,7 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
             // нашли очередное событие, смотрим на его номер
             if(index == ei) {
                 // нашли то, что надо
-                eventFlags.value = FBDGETPARAMETER(index, 1);
+                eventFlags.value = FBDGETPARAMETER(i, 1);
                 //
                 event->flags.seconds = 0;
                 event->flags.minutes = 0;
@@ -1356,6 +1356,18 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
         }
     }
     return false;
+}
+
+/**
+ * @brief Подтверждение (сброс) текущего события
+ * 
+ * @param index Индекс события (0..fbdTotalEventsCount())
+ */
+void fbdConfirmCurrentEvent(tSignal index)
+{
+    if(index >= FBD_EVENTS_COUNT) return;
+    //
+    fbdEventActiveFlags[index>>3] &= ~(1u<<(index&7));
 }
 
 /**
