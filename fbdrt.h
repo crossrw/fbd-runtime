@@ -576,6 +576,7 @@ typedef __packed_struct EventDescription_t {
     uint16_t logBegin : 1;                                      // требует регистрации в журнале
     uint16_t logEnd : 1;                                        // требует регистрации в журнале
     uint16_t conditions : 2;                                    // условие события
+    uint16_t cr : 1;                                            // событие требует подтверждения
 } tEventDescription;
 
 typedef union {
@@ -587,20 +588,21 @@ typedef union {
 // tEventDescription.flags
 // |31 |30 |29 |28 |27 |26 |25 |24 |23 |22 |21 |20 |19 |18 |17 |16 |15 |14 |13 |12 |11 |10 | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 // +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-// |                                                                       | Cond  |LGB|LGE| Svrt  |           imessage            |
+// |                                                                   |CR | Cond  |LB |LE | Svrt  |           imessage            |
 //
-// 12..13: Cond - Условие возникновения события
-//  00 - значение элемента == "level"
-//  01 - значение элемента != "level"
-//  10 - значение элемента >  "level"
-//  11 - значение элемента <  "level"
 // 8..9: Severity:
-//  00 - Information
-//  01 - Notice
-//  10 - Warning
-//  11 - Emergency
-// 10: LGE Помещать конец события в журнал
-// 11: LGB Помещать начало события в журнал
+//      00 - Information
+//      01 - Notice
+//      10 - Warning
+//      11 - Emergency
+// 10: LE Помещать конец события в журнал
+// 11: LB Помещать начало события в журнал
+// 12..13: Cond - Условие возникновения события
+//      00 - значение элемента == "level"
+//      01 - значение элемента != "level"
+//      10 - значение элемента >  "level"
+//      11 - значение элемента <  "level"
+// 14: CR Событие требует подтверждения
 
 // условие возникновения события
 enum FBD_EVENT_COND {
@@ -658,7 +660,7 @@ tSignal fbdTotalEventsCount(void);
 bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event);
 
 // Подтверждение (сброс) текущего события
-void fbdConfirmCurrentEvent(tSignal index);
+bool fbdConfirmCurrentEvent(tSignal index);
 
 // Получить описание события с индексом index из журнала событий
 // index - индекс записи в журнале событий, 0 - самое новое (последнее)

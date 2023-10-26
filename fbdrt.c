@@ -1007,11 +1007,14 @@ void fbdDoStep(tSignal period)
                             fbdEventActiveFlags[imessage>>3] |= 1u<<(imessage&7);
                         } else {
                             // событие перестало быть активным
-                            if((eventFlags.flags.logEnd)) {
-                                fbdAddLogEvent(eventFlags.flags, 0);
+                            if(!eventFlags.flags.cr) {
+                                // если стоит флаг необходимости подтверждения, то активность не снимаем!
+                                if((eventFlags.flags.logEnd)) {
+                                    fbdAddLogEvent(eventFlags.flags, 0);
+                                }
+                                // снимаем флаг активности события
+                                fbdEventActiveFlags[imessage>>3] &= ~(1u<<(imessage&7));
                             }
-                            // снимаем флаг активности события
-                            fbdEventActiveFlags[imessage>>3] &= ~(1u<<(imessage&7));
                         }
                     }
                 }
@@ -1318,7 +1321,7 @@ tSignal fbdTotalEventsCount(void)
 /**
  * @brief Получить описание активного события с указанным индексом
  * 
- * @param index Индекс события (0..fbdTotalEventsCount())
+ * @param index Индекс события (0..fbdTotalEventsCount()-1)
  * @param event Указатель на структуру описания активного события
  * @return true Событие есть, оно помещено в структуру event
  * @return false События с таким индексом нет
@@ -1329,11 +1332,72 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
     // проверка флага активности
     if(!(fbdEventActiveFlags[index>>3]&(1u<<(index&7)))) return false;
     //
-    // событие активно, ищем элемент ELEM_EVENT
-    tElemIndex i, ei;
-    unsigned char elem;
-    tEventDescriptionView eventFlags;
+    // возвращаем зафиксированное время
+    event->flags.seconds = fbdEventActiveTime[index].flags.seconds;
+    event->flags.minutes = fbdEventActiveTime[index].flags.minutes;
+    event->flags.hours = fbdEventActiveTime[index].flags.hours;
+    event->flags.month = fbdEventActiveTime[index].flags.month;
+    event->flags.day = fbdEventActiveTime[index].flags.day;
+    // важность
+    event->flags.severity = fbdEventActiveTime[index].flags.severity;
+    event->flags.started = 1;
+    // указатель на сообщение
+    event->message = fbdHMIgetIOhint(2, index);
     //
+    return true;
+    //
+    // // событие активно, ищем элемент ELEM_EVENT
+    // tElemIndex i, ei;
+    // unsigned char elem;
+    // tEventDescriptionView eventFlags;
+    // ei = 0;
+    // for(i=0; i < fbdElementsCount; i++) {
+    //     elem = fbdDescrBuf[i] & ELEMMASK;
+    //     if(elem == ELEM_EVENT) {
+    //         // нашли очередное событие, смотрим на его номер
+    //         if(index == ei) {
+    //             // нашли то, что надо
+    //             eventFlags.value = FBDGETPARAMETER(i, 1);
+    //             // возвращаем зафиксированное время
+    //             event->flags.seconds = fbdEventActiveTime[index].flags.seconds;
+    //             event->flags.minutes = fbdEventActiveTime[index].flags.minutes;
+    //             event->flags.hours = fbdEventActiveTime[index].flags.hours;
+    //             event->flags.month = fbdEventActiveTime[index].flags.month;
+    //             event->flags.day = fbdEventActiveTime[index].flags.day;
+    //             // важность
+    //             event->flags.severity = eventFlags.flags.severity;
+    //             event->flags.started = 1;
+    //             // указатель на сообщение
+    //             event->message = fbdHMIgetIOhint(2, eventFlags.flags.imessage);
+    //             //
+    //             return true;
+    //         } else {
+    //             ei++;
+    //         }
+    //     }
+    // }
+    // return false;
+}
+
+/**
+ * @brief Подтверждение (сброс) текущего события
+ * 
+ * @param index Индекс события (0..fbdTotalEventsCount()-1)
+ */
+bool fbdConfirmCurrentEvent(tSignal index)
+{
+    // проверка номера
+    if(index >= FBD_EVENTS_COUNT) return false;
+    // проверка текущей активности
+    if(!(fbdEventActiveFlags[index>>3]&(1u<<(index&7)))) return false;
+    // сброс флага активности
+    fbdEventActiveFlags[index>>3] &= ~(1u<<(index&7));
+    //
+    // необходимо добавить запись журнала
+    // ищем элемент ELEM_EVENT
+    tEventDescriptionView eventFlags;
+    unsigned char elem;
+    tElemIndex i, ei;
     ei = 0;
     for(i=0; i < fbdElementsCount; i++) {
         elem = fbdDescrBuf[i] & ELEMMASK;
@@ -1342,17 +1406,8 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
             if(index == ei) {
                 // нашли то, что надо
                 eventFlags.value = FBDGETPARAMETER(i, 1);
-                // возвращаем зафиксированное время
-                event->flags.seconds = fbdEventActiveTime[index].flags.seconds;
-                event->flags.minutes = fbdEventActiveTime[index].flags.minutes;
-                event->flags.hours = fbdEventActiveTime[index].flags.hours;
-                event->flags.month = fbdEventActiveTime[index].flags.month;
-                event->flags.day = fbdEventActiveTime[index].flags.day;
-                // важность
-                event->flags.severity = eventFlags.flags.severity;
-                event->flags.started = 1;
-                // указатель на сообщение
-                event->message = fbdHMIgetIOhint(2, eventFlags.flags.imessage);
+                // проверяем необходимость логирования завершения события
+                if(eventFlags.flags.logEnd) fbdAddLogEvent(eventFlags.flags, 0);
                 //
                 return true;
             } else {
@@ -1360,19 +1415,7 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
             }
         }
     }
-    return false;
-}
-
-/**
- * @brief Подтверждение (сброс) текущего события
- * 
- * @param index Индекс события (0..fbdTotalEventsCount())
- */
-void fbdConfirmCurrentEvent(tSignal index)
-{
-    if(index >= FBD_EVENTS_COUNT) return;
-    //
-    fbdEventActiveFlags[index>>3] &= ~(1u<<(index&7));
+    return true;
 }
 
 /**
@@ -1810,6 +1853,14 @@ void fbdCalcElement(tElemIndex curIndex)
                                 // день и месяц совпадают
                                 // проверка времени
                                 s1 = checkTimeInRange(FBDGETPARAMETER(curIndex, 1), FBDGETPARAMETER(curIndex, 2));
+                            } else s1 = 0;
+                            break;
+                        case 10:
+                            // состояние события
+                            // FBDGETPARAMETER(curIndex, 1)  - индекс события
+                            v = FBDGETPARAMETER(curIndex, 1);
+                            if(v < FBD_EVENTS_COUNT) {
+                                s1=(fbdEventActiveFlags[v>>3]&(1u<<(v&7)))?1:0;
                             } else s1 = 0;
                             break;
                         default:
