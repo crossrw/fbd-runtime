@@ -49,7 +49,8 @@
 // + SPEED_OPT больше не используется
 // + добавлен элемент MOD
 // + добавлен элемент MFUN
-// + события
+// + добавлен журнал событий
+// + расчет количества записей в журнале
 
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
@@ -1345,38 +1346,6 @@ bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event)
     event->message = fbdHMIgetIOhint(2, index);
     //
     return true;
-    //
-    // // событие активно, ищем элемент ELEM_EVENT
-    // tElemIndex i, ei;
-    // unsigned char elem;
-    // tEventDescriptionView eventFlags;
-    // ei = 0;
-    // for(i=0; i < fbdElementsCount; i++) {
-    //     elem = fbdDescrBuf[i] & ELEMMASK;
-    //     if(elem == ELEM_EVENT) {
-    //         // нашли очередное событие, смотрим на его номер
-    //         if(index == ei) {
-    //             // нашли то, что надо
-    //             eventFlags.value = FBDGETPARAMETER(i, 1);
-    //             // возвращаем зафиксированное время
-    //             event->flags.seconds = fbdEventActiveTime[index].flags.seconds;
-    //             event->flags.minutes = fbdEventActiveTime[index].flags.minutes;
-    //             event->flags.hours = fbdEventActiveTime[index].flags.hours;
-    //             event->flags.month = fbdEventActiveTime[index].flags.month;
-    //             event->flags.day = fbdEventActiveTime[index].flags.day;
-    //             // важность
-    //             event->flags.severity = eventFlags.flags.severity;
-    //             event->flags.started = 1;
-    //             // указатель на сообщение
-    //             event->message = fbdHMIgetIOhint(2, eventFlags.flags.imessage);
-    //             //
-    //             return true;
-    //         } else {
-    //             ei++;
-    //         }
-    //     }
-    // }
-    // return false;
 }
 
 /**
@@ -1419,6 +1388,19 @@ bool fbdConfirmCurrentEvent(tSignal index)
 }
 
 /**
+ * @brief Проверка корректности записи журнала
+ * 
+ * @param eventFlags 
+ * @return true Запись корректна
+ * @return false Запись не корректна
+ */
+bool fbdLogEventIsValid(tEventFlagsView eventFlags)
+{
+    if(eventFlags.flags.sign != FBD_EVENTS_FLAG_SIGN) return false;
+    return true;
+}
+
+/**
  * @brief Получить описание события из журнала
  * 
  * @param index Индекс записи в журнале событий, 0 - самое новое (последнее)
@@ -1429,16 +1411,34 @@ bool fbdConfirmCurrentEvent(tSignal index)
 bool fbdGetLogEvent(tSignal index, tEventLogItem *event)
 {
     // проверка на границу
-    if(index > (MAXNVRAMINDEX + 1 - fbdStartEventLog) / 2) return false;
+    if(index >= (MAXNVRAMINDEX + 1 - fbdStartEventLog) / 2) return false;
     // флаги
     tEventFlagsView eventFlags;
     eventFlags.value  = FBDgetProc(FBD_NVRAM, fbdStartEventLog + index*2);
     // проверка сигнатуры
-    if(eventFlags.flags.sign != 5) return false;
+    if(!fbdLogEventIsValid(eventFlags)) return false;
     //
     event->flags = eventFlags.flags;
     event->message = fbdHMIgetIOhint(2, FBDgetProc(FBD_NVRAM, fbdStartEventLog + index*2 + 1) & 255);
     return true;
+}
+
+/**
+ * @brief Возвращает количество записей в журнале событий
+ * 
+ * @return int Количество записей в журнале событий
+ */
+int fbdGetLogEventCount(void)
+{
+    tEventFlagsView eventFlags;
+    //
+    int logEventMaxCount = (MAXNVRAMINDEX + 1 - fbdStartEventLog) / 2;
+    for(int index=0; index < logEventMaxCount; index++) {
+        eventFlags.value = FBDgetProc(FBD_NVRAM, fbdStartEventLog + index*2);
+        if(!fbdLogEventIsValid(eventFlags)) return index;
+    }
+    //
+    return logEventMaxCount;
 }
 
 /**
@@ -1471,7 +1471,7 @@ void fbdAddLogEvent(tEventDescription eventDescription, char up)
     newItem.flags.month = FBDgetProc(FBD_PIN, GP_RTC_MONTH);
     newItem.flags.severity = eventDescription.severity;
     newItem.flags.started = up;
-    newItem.flags.sign = 5;
+    newItem.flags.sign = FBD_EVENTS_FLAG_SIGN;
     //
     temp = eventDescription.imessage;
     FBDsetProc(FBD_NVRAM, fbdStartEventLog, &newItem.value);
@@ -1484,7 +1484,7 @@ void fbdAddLogEvent(tEventDescription eventDescription, char up)
 /**
  * @brief Очистка журнала событий
  */
-void fbdClearEventLog()
+void fbdClearEventLog(void)
 {
     tSignal zero = 0;
     for(int i = fbdStartEventLog; i <= MAXNVRAMINDEX; i++) {

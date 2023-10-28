@@ -192,31 +192,31 @@ int main(void)
         int ei = 0;
         //
 
-        // printf("\n\nEVENTS LOG:\n");
-        //
-        // while(1) {
-        //     if(!fbdGetLogEvent(ei, &event)) {
-        //         printf("total %d\n", ei);
-        //         //
-        //         if((ei > 0) && ((ei % 20) == 0)) {
-        //             printf("pause\n");
-        //         }
-        //         break;
-        //     }
-        //     printf("idx:%3d se:%u  %2u-%2u %.2u:%.2u:%.2u '%s'\n", ei, event.flags.started, event.flags.day, event.flags.month, event.flags.hours, event.flags.minutes, event.flags.seconds, event.message);
-        //     ei++;
-        // }
-        //
-
-        printf("\n\nCURRENT EVENTS LOG:\n");
-        for(ei=0; ei < FBD_EVENTS_COUNT; ei++) {
-            if(fbdGetCurrentEvent(ei, &event)) {
-
-                printf("idx:%3d se:%u  %2u-%2u %.2u:%.2u:%.2u '%s'\n", ei, event.flags.started, event.flags.day, event.flags.month, event.flags.hours, event.flags.minutes, event.flags.seconds, event.message);
-
-                //printf("idx:%3d '%s'\n", ei, event.message);
+        int totalLogEvents = fbdGetLogEventCount();
+        printf("\n\nEVENTS LOG (%d):\n", totalLogEvents);
+        while(1) {
+            if(!fbdGetLogEvent(ei, &event)) {
+                printf("total %d\n", ei);
+                //
+                if((ei > 0) && ((ei % 20) == 0)) {
+                    printf("pause\n");
+                }
+                break;
             }
+            printf("idx:%3d se:%u  %2u-%2u %.2u:%.2u:%.2u '%s'\n", ei, event.flags.started, event.flags.day, event.flags.month, event.flags.hours, event.flags.minutes, event.flags.seconds, event.message);
+            ei++;
         }
+        
+
+        // printf("\n\nCURRENT EVENTS LOG:\n");
+        // for(ei=0; ei < FBD_EVENTS_COUNT; ei++) {
+        //     if(fbdGetCurrentEvent(ei, &event)) {
+
+        //         printf("idx:%3d se:%u  %2u-%2u %.2u:%.2u:%.2u '%s'\n", ei, event.flags.started, event.flags.day, event.flags.month, event.flags.hours, event.flags.minutes, event.flags.seconds, event.message);
+
+        //         //printf("idx:%3d '%s'\n", ei, event.message);
+        //     }
+        // }
 
 
     }
