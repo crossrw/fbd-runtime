@@ -131,6 +131,8 @@ typedef enum {
     ELEM_MOD     =  35,
     ELEM_MFUN    =  36,
     ELEM_EVENT   =  37,
+    ELEM_LUT     =  38,
+    ELEM_NLUT    =  39,
     //
     ELEM_TYPE_COUNT
 } tFBD_ELEMENT_TYPE;
@@ -661,6 +663,12 @@ tSignal fbdTotalEventsCount(void);
 //  true  - активное событие есть, оно помещено в структуру event
 bool fbdGetCurrentEvent(tSignal index, tEventLogItem *event);
 
+// Возвращает признак активности текущего события с указанным индексом 
+// Результат выполнения:
+//  false - события с таким индексом нет
+//  true  - активное событие есть
+bool fbdCurrentEventIsActive(tSignal index);
+
 // Подтверждение (сброс) текущего события
 bool fbdConfirmCurrentEvent(tSignal index);
 
@@ -674,9 +682,14 @@ int fbdGetLogEventCount(void);
 //  true  - событие в журнале есть, оно помещено в структуру event
 bool fbdGetLogEvent(tSignal index, tEventLogItem *event);
 
-// Очистка журнала событий
-void fbdClearEventLog(void);
+// Изменился текущий лог
+bool fbdLogEventChanged(void);
 
+// Изменился журнал событий
+bool fbdCurrentEventChanged(void);
+
+// Очистка журнала событий
+void fbdClearLogEvent(void);
 
 #endif  // USE_EVENTS
 
