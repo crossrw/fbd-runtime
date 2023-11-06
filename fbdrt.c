@@ -1418,6 +1418,42 @@ bool fbdConfirmCurrentEvent(tSignal index)
 }
 
 /**
+ * @brief Проверка возможности подтверждения текущего события
+ * 
+ * @param index Индекс события (0..fbdTotalEventsCount()-1)
+ * @return true Событие может быть подтверждено
+ * @return false Событие не может быть подтверждено
+ */
+bool fbdCanConfirmCurrentEvent(tSignal index)
+{
+    // проверка номера
+    if(index >= FBD_EVENTS_COUNT) return false;
+    // проверка текущей активности
+    if(!(fbdEventActiveFlags[index>>3]&(1u<<(index&7)))) return false;
+    //
+    // ищем элемент ELEM_EVENT для того, что-бы выяснить возможность его подтверждения
+    tEventDescriptionView eventFlags;
+    unsigned char elem;
+    tElemIndex i, ei;
+    ei = 0;
+    for(i=0; i < fbdElementsCount; i++) {
+        elem = fbdDescrBuf[i] & ELEMMASK;
+        if(elem == ELEM_EVENT) {
+            // нашли очередное событие, смотрим на его номер
+            if(index == ei) {
+                // нашли то, что надо
+                eventFlags.value = FBDGETPARAMETER(i, 1);
+                // проверка флага подтверждения
+                if(eventFlags.flags.cr) return true; else return false;
+            } else {
+                ei++;
+            }
+        }
+    }
+    return false;
+}
+
+/**
  * @brief Проверка корректности записи журнала
  * 
  * @param eventFlags 

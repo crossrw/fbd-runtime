@@ -672,6 +672,9 @@ bool fbdCurrentEventIsActive(tSignal index);
 // Подтверждение (сброс) текущего события
 bool fbdConfirmCurrentEvent(tSignal index);
 
+// Проверка возможности подтверждения текущего события
+bool fbdCanConfirmCurrentEvent(tSignal index);
+
 //  Возвращает количество записей в журнале событий
 int fbdGetLogEventCount(void);
 
