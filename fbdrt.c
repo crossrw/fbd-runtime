@@ -3,7 +3,7 @@
  * @author crossrw1@gmail.com
  * @brief FBD-Runtime library
  * @version 10.0
- * @date 2021-11-17
+ * @date 2023-06-11
  */
 
 #include <stdlib.h>
@@ -755,7 +755,7 @@ void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
                     if(k > 1) {
                         k--;
                         for(j=-k/2; j<=k/2 + k%2; j++) {
-                            FBDdrawLine(roundf(elem->x1-j*((tScrElemLine *)elem)->sine), roundf(elem->y1+j*((tScrElemLine *)elem)->cosinus), roundf(((tScrElemLine *)elem)->x2-j*((tScrElemLine *)elem)->sine), roundf(((tScrElemLine *)elem)->y2+j*((tScrElemLine *)elem)->cosinus), ((tScrElemLine *)elem)->color);
+                            FBDdrawLine(lroundf(elem->x1-j*((tScrElemLine *)elem)->sine), lroundf(elem->y1+j*((tScrElemLine *)elem)->cosinus), lroundf(((tScrElemLine *)elem)->x2-j*((tScrElemLine *)elem)->sine), lroundf(((tScrElemLine *)elem)->y2+j*((tScrElemLine *)elem)->cosinus), ((tScrElemLine *)elem)->color);
                         }
                     } else {
                         FBDdrawLine(elem->x1, elem->y1, ((tScrElemLine *)elem)->x2, ((tScrElemLine *)elem)->y2, ((tScrElemLine *)elem)->color);
@@ -2075,7 +2075,7 @@ void fbdCalcElement(tElemIndex curIndex)
                                     break;
                                 case 1:                                 // пила
 #ifdef USE_MATH
-                                    s1 = roundl(1.0*s2*(s1-s3)/s1);
+                                    s1 = lroundf(1.0*s2*(s1-s3)/s1);
 #else
                                     s1 = (s2*(s1-s3))/s1;
 #endif
@@ -2083,9 +2083,9 @@ void fbdCalcElement(tElemIndex curIndex)
                                 case 2:                                 // треугольник
                                     if(s3 > (s1>>1)) {
 #ifdef USE_MATH
-                                        s1 = roundl(2.0*s2*(s1-s3)/s1); // нарастание
+                                        s1 = lroundf(2.0*s2*(s1-s3)/s1); // нарастание
                                     } else {
-                                        s1 = roundl(2.0*s2*s3/s1);      // спад
+                                        s1 = lroundf(2.0*s2*s3/s1);      // спад
 #else
                                         s1 = 2*s2*(s1-s3)/s1;           // нарастание
                                     } else {
@@ -2095,7 +2095,7 @@ void fbdCalcElement(tElemIndex curIndex)
                                     break;
 #ifdef USE_MATH
                                 case 3:                                 // sin
-                                    s1 = roundl(s2*sin(2.0*M_PI*(s1-s3)/s1));
+                                    s1 = lroundf(s2*sinf(2.0*M_PI*(s1-s3)/s1));
                                     break;
 #endif
                             }
