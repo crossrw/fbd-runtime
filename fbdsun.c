@@ -7,7 +7,8 @@
 
 /**
  * @brief Расчёт угла возвышения солнца над горизонтом
- * 
+ * This is a function that calculates the sun position (altitude) at a given location (latitude and longitude) and time (Unix timestamp).
+ * It uses the solar coordinate algorithm from the U.S. Naval Observatory Astronomical Applications Department.
  * @param lat Широта
  * @param lon Долгота
  * @param unix Текущее время

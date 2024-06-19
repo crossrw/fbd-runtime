@@ -2292,9 +2292,16 @@ bool getAndClearChangeModbusFlag(tElemIndex index)
     while(index--) {
         if((fbdDescrBuf[index] & ELEMMASK) == ELEM_OUT_MDBS) varIndex++;
     }
-    if(fbdChangeVarBuf[varIndex >> 3]&(1u << (varIndex & 7))) {
+    // if(fbdChangeVarBuf[varIndex >> 3]&(1u << (varIndex & 7))) {
+    //     // флаг установлен, сбрасываем
+    //     fbdChangeVarBuf[varIndex>>3] &= ~(1u<<(varIndex&7));
+    //     return true;
+    // } else {
+    //     return false;
+    // }
+    if(fbdChangeModbusBuf[varIndex >> 3]&(1u << (varIndex & 7))) {
         // флаг установлен, сбрасываем
-        fbdChangeVarBuf[varIndex>>3] &= ~(1u<<(varIndex&7));
+        fbdChangeModbusBuf[varIndex>>3] &= ~(1u<<(varIndex&7));
         return true;
     } else {
         return false;
