@@ -2,8 +2,8 @@
  * @file fbdrt.h
  * @author crossrw1@gmail.com
  * @brief FBD-Runtime Library Headers
- * @version 10.0
- * @date 2023-06-11
+ * @version 11.0
+ * @date 13-02-2026
  */
 
 #ifndef FBDRT_H
@@ -16,7 +16,8 @@
 // 8    - поддержка экранов
 // 9    - Modbus
 // 10   - журналы и элемент MOD
-#define FBD_LIB_VERSION 10
+// 11   - сумматор с установкой значения
+#define FBD_LIB_VERSION 11
 
 // описание упакованной структуры
 #if defined ( __CC_ARM   )
@@ -64,7 +65,8 @@
 //
 // максимальный размер стека, используемый при расчете схемы
 // один элемент стека занимает (sizeof(tElemIndex)+1) байт
-#define FBDSTACKSIZE 128
+#define FBDSTACKSIZE        128
+#define FBDSTACKSIZEMASK    (FBDSTACKSIZE-1)
 //
 // data type for stack pointer
 typedef uint8_t tFBDStackPnt;
@@ -133,6 +135,7 @@ typedef enum {
     ELEM_EVENT   =  37,
     ELEM_LUT     =  38,
     ELEM_NLUT    =  39,
+    ELEM_SUMM    =  40,
     //
     ELEM_TYPE_COUNT
 } tFBD_ELEMENT_TYPE;
@@ -354,7 +357,7 @@ typedef struct netvar_t {
     tSignal value;              // значение сетевой переменной
 } tNetVar;
 //
-void fbdSetNetVar(tNetVar *netvar);
+void fbdSetNetVar(const tNetVar *netvar);
 //
 bool fbdGetNetVar(tNetVar *netvar);
 //
@@ -734,4 +737,4 @@ DESCR_MEM char DESCR_MEM_SUFX *fbdHMIgetIOhint(char type, char index);
 //
 #endif  // USE_HMI
 
-#endif  // FBDRT_H
+#endif

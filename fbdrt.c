@@ -2,8 +2,8 @@
  * @file fbdrt.c
  * @author crossrw1@gmail.com
  * @brief FBD-Runtime library
- * @version 10.0
- * @date 2023-06-11
+ * @version 11.0
+ * @date 13-02-2026
  */
 
 #include <stdlib.h>
@@ -56,6 +56,9 @@
 
 // 19-06-2024
 // Исправлена ошибка буфера fbdChangeVarBuf
+
+// 13-02-2026
+// Добавлен элемент SUMM (интегратор с сбросом)
 
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
@@ -296,13 +299,13 @@ bool intLogEventChanged;                        // признаки измене
 char fbdFirstFlag;
 
 // массив с количествами входов для элементов каждого типа
-ROM_CONST uint8_t ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1,2,0,1,5,1};
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefInputsCount[ELEM_TYPE_COUNT]       = {1,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,4,3,3,5,1,1,0,2,2,2,3,2,2,2,2,2,0,1,2,0,1,5,1, 5};
 // массив с количествами параметров для элементов каждого типа
-ROM_CONST uint8_t ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2,0,4,2,1,66};
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefParametersCount[ELEM_TYPE_COUNT]   = {1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,0,0,0,0,0,1,5,0,0,0,0,0,0,0,0,1,3,2,0,4,2,1,66,0};
 // массив с количествами хранимых данных для элементов каждого типа
-ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0};
-//                                                                           0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3
-//                                                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9
+ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,2,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0, 1};
+//                                                                           0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3  4
+//                                                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9  0
 // Параметры элемента ELEM_INP_MDBS (чтение Modbus)
 //
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
@@ -375,7 +378,7 @@ ROM_CONST uint8_t ROM_CONST_SUFX FBDdefStorageCount[ELEM_TYPE_COUNT]      = {0,0
  * @param size Размер массива данных
  * @return uint32_t Результат вычисления
  */
-uint32_t fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int size)
+static uint32_t fbdCRC32(DESCR_MEM unsigned char DESCR_MEM_SUFX *data, int size)
 {
     uint32_t crc = ~0;
     //
@@ -685,7 +688,7 @@ void fbdSetMemory(char *buf, bool needReset)
  * @return true Элемент видим
  * @return false Элемент не видим
  */
-bool isScrElemVisible(tScrElemBase *elem)
+static bool isScrElemVisible(const tScrElemBase *elem)
 {
     if(elem->visibleElem == 0xffff) return true;    // не выбран элемент видимости
     switch(elem->visibleCond) {
@@ -704,20 +707,20 @@ bool isScrElemVisible(tScrElemBase *elem)
     }
 }
 
-tSignal getElementOutputValue(tElemIndex index)
+static tSignal getElementOutputValue(tElemIndex index)
 {
     if(index == 0xffff) return 0;
     return fbdMemoryBuf[index];
 }
 
-void sprintf2d(char *buf, tSignal val)
+static void sprintf2d(char *buf, tSignal val)
 {
     *(buf + 1) = val % 10 + '0';
     val /= 10;
     *(buf) = val % 10 + '0';
 }
 
-void sprintf4d(char *buf, tSignal val)
+static void sprintf4d(char *buf, tSignal val)
 {
     *(buf + 3) = val % 10 + '0';
     val /= 10;
@@ -733,7 +736,7 @@ void sprintf4d(char *buf, tSignal val)
  * 
  * @param screen Указатель на описание экрана
  */
-void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
+static void drawCurrentScreen(DESCR_MEM tScreen DESCR_MEM_SUFX *screen)
 {
     tScrElemBase *elem;
     char dttext[32];
@@ -965,6 +968,7 @@ void fbdDoStep(tSignal period)
             case ELEM_TON:                                                  // timer TON
             case ELEM_PID:                                                  // PID
             case ELEM_SUM:                                                  // SUM
+            case ELEM_SUMM:                                                 // SUMM
             case ELEM_TP:                                                   // timer TP
             case ELEM_GEN:                                                  // GEN
                 if(!period) break;
@@ -1051,7 +1055,7 @@ void fbdDoStep(tSignal period)
  * 
  * @param netvar Указатель на структуру описания сетевой переменной
  */
-void fbdSetNetVar(tNetVar *netvar)
+void fbdSetNetVar(const tNetVar *netvar)
 {
     tElemIndex i;
     //
@@ -1158,8 +1162,6 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
 {
     if(!fbdModbusRTUCount) return false;
     // поиск следующего элемента Modbus RTU
-    tElemIndex index, i;
-    unsigned char elem;
     // проверка на паузу между любыми идущими подряд запросами (борьба с Danfoss MCX)
     if(fbdModbusRTUDelayTimer) return false;
     // проверка необходимости повторного запроса
@@ -1170,9 +1172,11 @@ bool fbdGetNextModbusRTURequest(tModbusReq *mbrequest)
         //
         return true;
     } else {
+        tElemIndex index, i;
         // поиск следующего элемента
         index = fbdModbusRTUIndex;
         for(i=0; i < fbdElementsCount; i++) {
+            unsigned char elem;
             // переходим к следующему элементу
             index++;
             if(index >= fbdElementsCount) {
@@ -1247,9 +1251,8 @@ void fbdSetModbusRTUNoResponse(int errCode)
 bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest)
 {
     if(!fbdModbusTCPCount) return false;
+    //
     // поиск следующего элемента Modbus TCP
-    tElemIndex index, i;
-    unsigned char elem;
     // проверка необходимости повторного запроса
     if(fbdModbusTCPErrorCounter) {
         // необходим повторный запрос
@@ -1258,9 +1261,12 @@ bool fbdGetNextModbusTCPRequest(tModbusReq *mbrequest)
         //
         return true;
     } else {
+        tElemIndex index, i;
+        //
         // поиск следующего элемента
         index = fbdModbusTCPIndex;
         for(i=0; i < fbdElementsCount; i++) {
+            unsigned char elem;
             // переходим к следующему элементу
             index++;
             if(index >= fbdElementsCount) {
@@ -1398,11 +1404,10 @@ bool fbdConfirmCurrentEvent(tSignal index)
     // необходимо добавить запись журнала
     // ищем элемент ELEM_EVENT
     tEventDescriptionView eventFlags;
-    unsigned char elem;
     tElemIndex i, ei;
     ei = 0;
     for(i=0; i < fbdElementsCount; i++) {
-        elem = fbdDescrBuf[i] & ELEMMASK;
+        unsigned char elem = fbdDescrBuf[i] & ELEMMASK;
         if(elem == ELEM_EVENT) {
             // нашли очередное событие, смотрим на его номер
             if(index == ei) {
@@ -1436,11 +1441,10 @@ bool fbdCanConfirmCurrentEvent(tSignal index)
     //
     // ищем элемент ELEM_EVENT для того, что-бы выяснить возможность его подтверждения
     tEventDescriptionView eventFlags;
-    unsigned char elem;
     tElemIndex i, ei;
     ei = 0;
     for(i=0; i < fbdElementsCount; i++) {
-        elem = fbdDescrBuf[i] & ELEMMASK;
+        unsigned char elem = fbdDescrBuf[i] & ELEMMASK;
         if(elem == ELEM_EVENT) {
             // нашли очередное событие, смотрим на его номер
             if(index == ei) {
@@ -1463,7 +1467,7 @@ bool fbdCanConfirmCurrentEvent(tSignal index)
  * @return true Запись корректна
  * @return false Запись не корректна
  */
-bool fbdLogEventIsValid(tEventFlagsView eventFlags)
+static bool fbdLogEventIsValid(tEventFlagsView eventFlags)
 {
     if(eventFlags.flags.sign != FBD_EVENTS_FLAG_SIGN) return false;
     return true;
@@ -1830,6 +1834,8 @@ void fbdCalcElement(tElemIndex curIndex)
                     } else s1 = FBDGETSTORAGE(curIndex, 0);
                     break;
                 case ELEM_DTRG:                                                         // DTRG
+                    // s1 - D
+                    // s2 - C
                     // смотрим установку флага фронта на входе "С"
                     if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+1])))
                         fbdSetStorage(curIndex, 0, s1);
@@ -2005,6 +2011,10 @@ void fbdCalcElement(tElemIndex curIndex)
                     } else s1 = fbdMemoryBuf[curIndex];
                     break;
                 case ELEM_SUM:                                                          // SUM
+                    // s1 - X   (входное значение)
+                    // s2 - dT  (таймер)
+                    // s3 - Lim (ограничение)
+                    //
                     if(!FBDGETSTORAGE(curIndex, 0)) {       // проверка срабатывания таймера
                         fbdSetStorage(curIndex, 0, s2);     // установка таймера
                         //
@@ -2012,6 +2022,36 @@ void fbdCalcElement(tElemIndex curIndex)
                         // ограничение
                         if(s1 > 0) { if(s1 > s3) s1 = s3; } else { if(s1 < -s3) s1 = -s3; }
                     } else s1 = fbdMemoryBuf[curIndex];
+                    break;
+                case ELEM_SUMM:                                                         // SUMM (с установкой значения)
+                    // s1 - X   (входное значение)
+                    // s2 - dT  (таймер)
+                    // s3 - Lim (ограничение)
+                    // s4 - D   (записываемое значение)
+                    // s5 - C   (фронт записи)
+                    //
+                    if(getRiseFlag(ELEMINDEX_BYTE_ORDER(fbdInputsBuf[baseInput+4]))) {
+                        // обнаружен фронт записи значения
+                        s1 = s4;
+                        if(s1 > 0) {
+                            if(s1 > s3) s1 = s3;
+                        } else { 
+                            if(s1 < -s3) s1 = -s3;
+                        }
+                    } else {
+                        // флага записи не было
+                        if(!FBDGETSTORAGE(curIndex, 0)) {       // проверка срабатывания таймера
+                            fbdSetStorage(curIndex, 0, s2);     // установка таймера
+                            //
+                            s1 += fbdMemoryBuf[curIndex];       // сложение с предыдущим значением
+                            // ограничение
+                            if(s1 > 0) {
+                                if(s1 > s3) s1 = s3;
+                            } else {
+                                if(s1 < -s3) s1 = -s3;
+                            }
+                        } else s1 = fbdMemoryBuf[curIndex];
+                    }
                     break;
                 case ELEM_COUNTER:                                                      // Counter
                     if(s3) s1 = 0; else {
@@ -2185,8 +2225,8 @@ void fbdCalcElement(tElemIndex curIndex)
         }
         // текущий элемент вычислен, пробуем достать из стека родительский элемент
         if(fbdStackPnt--) {
-            curIndex = fbdStack[fbdStackPnt].index;         // восстанавливаем родительский элемент
-            curInput = fbdStack[fbdStackPnt].input + 1;     // в родительском элементе сразу переходим к следующему входу
+            curIndex = fbdStack[fbdStackPnt & FBDSTACKSIZEMASK].index;         // восстанавливаем родительский элемент
+            curInput = fbdStack[fbdStackPnt & FBDSTACKSIZEMASK].input + 1;     // в родительском элементе сразу переходим к следующему входу
             baseInput = FBDINPUTOFFSET(curIndex);           // элемент сменился, расчет смещения на первый вход элемента
             inputCount = FBDdefInputsCount[fbdDescrBuf[curIndex] & ELEMMASK];
         } else break;                                       // стек пуст, вычисления завершены
@@ -2605,7 +2645,7 @@ inline tSignal intAbs(tSignal val)
 uint32_t getCoilBitsMask(unsigned count)
 {
     if(count < 32) {
-        return (1 << count) - 1;
+        return (1u << count) - 1;
     } else {
         return 0xffffffff;
     }
