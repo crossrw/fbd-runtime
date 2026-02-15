@@ -135,7 +135,7 @@ typedef enum {
     ELEM_EVENT   =  37,
     ELEM_LUT     =  38,
     ELEM_NLUT    =  39,
-    ELEM_SUMM    =  40,
+    ELEM_SUMM    =  40,         // интегратор с записью значений
     //
     ELEM_TYPE_COUNT
 } tFBD_ELEMENT_TYPE;
@@ -430,7 +430,6 @@ typedef union {
     uint16_t        ushortData[2];
     int16_t         shortData[2];
     uint8_t         byteData[4];
-
 } tModbusData;
 
 // структура описания запроса MODBUS
@@ -448,7 +447,7 @@ typedef struct modbusreq_t {
 // modbus words order
 #define FBD_MODBUS_OPT_WO 0x08000000
 
-// Получить статус использования Modbus заруженной схемой
+// Получить статус использования Modbus загруженной схемой
 // Вызывать только после выполнения "fbdSetMemory()"
 // Результат выполнения:
 //  FBD_MODBUS_NONE   - Modbus не используется
@@ -529,6 +528,8 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 #define FBD_MODBUS_RETRYCOUNT   ((FBD_MODBUSRTU_OPT >> 19) & 3)
 #define FBD_MODBUS_PAUSE        ((FBD_MODBUSRTU_OPT >> 21) & 1023)
 #define FBD_MODBUSRTU_DELAY     (FBD_MODBUSRTU_OPT2 & 255)
+#define FBD_MODBUSSAVEOLDVALUE  ((FBD_MODBUSRTU_OPT2 >> 8) & 1)
+
 #define FBD_EVENTS_COUNT        ((*fbdGlobalOptionsCount>FBD_OPT_EVENTS_COUNT)?fbdGlobalOptions[FBD_OPT_EVENTS_COUNT]:0)
 
 // FBD_MODBUS_OPT
@@ -563,10 +564,11 @@ extern DESCR_MEM tSignal DESCR_MEM_SUFX *fbdGlobalOptions;
 // FBD_MODBUS_OPT2
 // |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// |                               Reserve                                 |         Delay         |
+// |                               Reserve                              |SV|         Delay         |
 //
 // 0..7:   Задержка между любыми запросами - 0..255, мс
-// 8..31:  Резерв
+// 8:      SV: действия при ошибке чтения: 0 - записывать значение по умолчанию, 1 - сохранять старое значение
+// 9..31:  Резерв
 
 // -------------------------------------------------------------------------------------------------------
 // События/Журнал

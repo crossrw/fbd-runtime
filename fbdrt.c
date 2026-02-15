@@ -59,6 +59,7 @@
 
 // 13-02-2026
 // Добавлен элемент SUMM (интегратор с сбросом)
+// Опция сохранения значения при ошибке чтения Modbus
 
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
@@ -125,25 +126,25 @@ typedef struct fbdstackitem_t {
     unsigned char input;            // номер входа
 } tFBDStackItem;
 
-void setCalcFlag(tElemIndex element);
-void setRiseFlag(tElemIndex element);
-void setChangeVarFlag(tElemIndex index);
-void setChangeModbusFlag(tElemIndex index);
-bool getAndClearChangeModbusFlag(tElemIndex index);
-void setModbusNoResponse(tElemIndex index);
-void setModbusResponse(tElemIndex index, tSignal response);
-void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest);
-void setModbusFloat(tElemIndex index, float data, float mul);
-uint32_t getCoilBitsMask(unsigned count);
-void swapModbusByteOrder(tModbusData *data);
-void swapModbusWordOrder(tModbusData *data);
+static void setCalcFlag(tElemIndex element);
+static void setRiseFlag(tElemIndex element);
+static void setChangeVarFlag(tElemIndex index);
+static void setChangeModbusFlag(tElemIndex index);
+static bool getAndClearChangeModbusFlag(tElemIndex index);
+static void setModbusNoResponse(tElemIndex index);
+static void setModbusResponse(tElemIndex index, tSignal response);
+static void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest);
+static void setModbusFloat(tElemIndex index, float data, float mul);
+static uint32_t getCoilBitsMask(unsigned count);
+static void swapModbusByteOrder(tModbusData *data);
+static void swapModbusWordOrder(tModbusData *data);
 
-char getCalcFlag(tElemIndex element);
-char getRiseFlag(tElemIndex element);
+static char getCalcFlag(tElemIndex element);
+static char getRiseFlag(tElemIndex element);
 
-tSignal intAbs(tSignal val);
+static tSignal intAbs(tSignal val);
 
-tSignal interpolation(tSignal x, tSignal x1, tSignal y1, tSignal x2, tSignal y2);
+static tSignal interpolation(tSignal x, tSignal x1, tSignal y1, tSignal x2, tSignal y2);
 
 #ifdef USE_EVENTS
 void fbdAddLogEvent(tEventDescription eventDescription, char up);
@@ -1967,6 +1968,8 @@ void fbdCalcElement(tElemIndex curIndex)
                                 s1=(fbdEventActiveFlags[v>>3]&(1u<<(v&7)))?1:0;
                             } else s1 = 0;
                             break;
+                        // case 11: результат чтения Modbus
+                        // case 12: результат записи Modbus
                         default:
                             s1 = 0;
                             break;
@@ -2254,7 +2257,7 @@ void fbdSetStorage(tElemIndex element, unsigned char index, tSignal value)
  * 
  * @param element Индекс элемента
  */
-void setCalcFlag(tElemIndex element)
+static void setCalcFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<((element&3)<<1);
 }
@@ -2264,7 +2267,7 @@ void setCalcFlag(tElemIndex element)
  * 
  * @param element Индекс элемента
  */
-void setRiseFlag(tElemIndex element)
+static void setRiseFlag(tElemIndex element)
 {
     fbdFlagsBuf[element>>2] |= 1u<<(((element&3)<<1)+1);
 }
@@ -2275,7 +2278,7 @@ void setRiseFlag(tElemIndex element)
  * @param element Индекс элемента
  * @return char 1 - установлен, 0 - сброшен
  */
-char getCalcFlag(tElemIndex element)
+static char getCalcFlag(tElemIndex element)
 {
    return (fbdFlagsBuf[element>>2]&(1u<<((element&3)<<1)))?1:0;
 }
@@ -2286,7 +2289,7 @@ char getCalcFlag(tElemIndex element)
  * @param element Индекс элемента
  * @return char 1 - установлен, 0 - сброшен
  */
-char getRiseFlag(tElemIndex element)
+static char getRiseFlag(tElemIndex element)
 {
     return (fbdFlagsBuf[element>>2]&(1u<<(((element&3)<<1)+1)))?1:0;
 }
@@ -2296,7 +2299,7 @@ char getRiseFlag(tElemIndex element)
  * 
  * @param index Индекс элемента ELEM_OUT_VAR
  */
-void setChangeVarFlag(tElemIndex index)
+static void setChangeVarFlag(tElemIndex index)
 {
     tElemIndex varIndex = 0;
     // определяем номер флага
@@ -2311,7 +2314,7 @@ void setChangeVarFlag(tElemIndex index)
  * 
  * @param index Индекс элемента записи Modbus
  */
-void setChangeModbusFlag(tElemIndex index)
+static void setChangeModbusFlag(tElemIndex index)
 {
     tElemIndex varIndex = 0;
     // определяем номер флага
@@ -2328,20 +2331,14 @@ void setChangeModbusFlag(tElemIndex index)
  * @return true Флаг установлен и был сброшен
  * @return false Флаг сброшен
  */
-bool getAndClearChangeModbusFlag(tElemIndex index)
+static bool getAndClearChangeModbusFlag(tElemIndex index)
 {
     tElemIndex varIndex = 0;
     // определяем номер флага
     while(index--) {
         if((fbdDescrBuf[index] & ELEMMASK) == ELEM_OUT_MDBS) varIndex++;
     }
-    // if(fbdChangeVarBuf[varIndex >> 3]&(1u << (varIndex & 7))) {
-    //     // флаг установлен, сбрасываем
-    //     fbdChangeVarBuf[varIndex>>3] &= ~(1u<<(varIndex&7));
-    //     return true;
-    // } else {
-    //     return false;
-    // }
+    //
     if(fbdChangeModbusBuf[varIndex >> 3]&(1u << (varIndex & 7))) {
         // флаг установлен, сбрасываем
         fbdChangeModbusBuf[varIndex>>3] &= ~(1u<<(varIndex&7));
@@ -2355,14 +2352,14 @@ bool getAndClearChangeModbusFlag(tElemIndex index)
  * @brief Установка признака "нет ответа" для элемента чтения или записи Modbus
  * @param index Индекс элемента чтения или записи Modbus
  */
-void setModbusNoResponse(tElemIndex index)
+static void setModbusNoResponse(tElemIndex index)
 {
     if(index == MAX_INDEX) return;
     //
     switch (fbdDescrBuf[index] & ELEMMASK) {
         case ELEM_INP_MDBS:
             // ошибка чтения Modbus, устанавливаем значение по умолчанию
-            fbdMemoryBuf[index] = FBDGETPARAMETER(index, 2);
+            if(!FBD_MODBUSSAVEOLDVALUE) fbdMemoryBuf[index] = FBDGETPARAMETER(index, 2);
             break;
         case ELEM_OUT_MDBS:
             // ошибка записи Modbus, устанавливаем флаг необходимости повторной записи
@@ -2377,7 +2374,7 @@ void setModbusNoResponse(tElemIndex index)
  * @param index Индекс элемента чтения или записи Modbus
  * @param response Принятые данные
  */
-void setModbusResponse(tElemIndex index, tSignal response)
+static void setModbusResponse(tElemIndex index, tSignal response)
 {
     tSignal options;
     tModbusData data;
@@ -2458,7 +2455,7 @@ void setModbusResponse(tElemIndex index, tSignal response)
  * @param index Индекс элемента чтения или записи Modbus
  * @param mbrequest Указатель на структуру запроса Modbus
  */
-void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest)
+static void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest)
 {
     unsigned char fmtcnt;
     tSignal options = FBDGETPARAMETER(index, 1);
@@ -2580,7 +2577,7 @@ void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest)
  * @param data Новые данные
  * @param mul Множитель
  */
-void setModbusFloat(tElemIndex index, float data, float mul)
+static void setModbusFloat(tElemIndex index, float data, float mul)
 {
     int fpc = fpclassify(data);
     if((fpc == FP_NORMAL) || (fpc == FP_ZERO)) {
@@ -2599,7 +2596,7 @@ void setModbusFloat(tElemIndex index, float data, float mul)
  * @brief Меняет порядок байтов в данных Modbus
  * @param data Указатель на данные
  */
-void swapModbusByteOrder(tModbusData *data)
+static void swapModbusByteOrder(tModbusData *data)
 {
     unsigned char t;
     //
@@ -2616,7 +2613,7 @@ void swapModbusByteOrder(tModbusData *data)
  * @brief Меняет порядок слов в данных Modbus
  * @param data Указатель на данные
  */
-void swapModbusWordOrder(tModbusData *data)
+static void swapModbusWordOrder(tModbusData *data)
 {
     unsigned short t;
     //
@@ -2631,7 +2628,7 @@ void swapModbusWordOrder(tModbusData *data)
  * @param val Значение сигнала
  * @return tSignal Абсолютное значение сигнала
  */
-inline tSignal intAbs(tSignal val)
+static inline tSignal intAbs(tSignal val)
 {
     return (val>=0)?val:-val;
 }
@@ -2642,7 +2639,7 @@ inline tSignal intAbs(tSignal val)
  * @param count Количество бит
  * @return uint32_t Результат
  */
-uint32_t getCoilBitsMask(unsigned count)
+static uint32_t getCoilBitsMask(unsigned count)
 {
     if(count < 32) {
         return (1u << count) - 1;
@@ -2661,7 +2658,7 @@ uint32_t getCoilBitsMask(unsigned count)
  * @param y2 Точка 2, Y
  * @return tSignal Вычисленное значение Y
  */
-tSignal interpolation(tSignal x, tSignal x1, tSignal y1, tSignal x2, tSignal y2)
+static tSignal interpolation(tSignal x, tSignal x1, tSignal y1, tSignal x2, tSignal y2)
 {
     if(x == x1) return y1;
     if(x == x2) return y2;
