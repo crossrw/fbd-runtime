@@ -1970,6 +1970,21 @@ void fbdCalcElement(tElemIndex curIndex)
                             break;
                         // case 11: результат чтения Modbus
                         // case 12: результат записи Modbus
+
+
+// 00           Успех
+// 01  (0x01)   Illegal Function                        The function code is invalid or not allowed for the slave device.
+// 02  (0x02)   Illegal Data Address                    The requested data address range is not valid for the slave device.
+// 03  (0x03)   Illegal Data Value                      A value in the query's data field is unacceptable for the slave.
+// 04  (0x04)   Slave Device Failure                    An unrecoverable error, such as a hardware failure, occurred in the slave.
+// 05  (0x05)   Acknowledge                             The slave accepted the request but needs extended processing time. The master should poll later.
+// 06  (0x06)   Slave Device Busy                       The slave is processing a long command; the master should retry later.
+// 07  (0x07)   Negative Acknowledge                    The slave cannot perform the requested program function (used with program commands 13 or 14).
+// 08  (0x08)   Memory Parity Error                     The slave detected a parity error in extended memory while reading a record file (used with function codes 20 and 21).
+// 10  (0x0A)   Gateway Path Unavailable                The gateway could not allocate a communication path.
+// 11  (0x0B)   Gateway Target Device Failed to Respond No response was received from the target device through the gateway.
+// 255 (0xFF)   Другая ошибка (нет ответа, ошибка CRC, некорректный формат пакета и тп)
+
                         default:
                             s1 = 0;
                             break;
@@ -2358,7 +2373,8 @@ static void setModbusNoResponse(tElemIndex index)
     //
     switch (fbdDescrBuf[index] & ELEMMASK) {
         case ELEM_INP_MDBS:
-            // ошибка чтения Modbus, устанавливаем значение по умолчанию
+            // ошибка чтения Modbus
+            // если не установлен флаг FBD_MODBUSSAVEOLDVALUE, то устанавливаем значение по умолчанию
             if(!FBD_MODBUSSAVEOLDVALUE) fbdMemoryBuf[index] = FBDGETPARAMETER(index, 2);
             break;
         case ELEM_OUT_MDBS:
