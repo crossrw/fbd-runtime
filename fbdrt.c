@@ -60,6 +60,7 @@
 // 13-02-2026
 // Добавлен элемент SUMM (интегратор с сбросом)
 // Опция сохранения значения при ошибке чтения Modbus
+// Статус обмена Modbus для элемента MFUN
 
 // -----------------------------------------------------------------------------
 // FBDgetProc() и FBDsetProc() - callback, должны быть описаны в основной программе
@@ -131,7 +132,8 @@ static void setRiseFlag(tElemIndex element);
 static void setChangeVarFlag(tElemIndex index);
 static void setChangeModbusFlag(tElemIndex index);
 static bool getAndClearChangeModbusFlag(tElemIndex index);
-static void setModbusNoResponse(tElemIndex index);
+static void setModbusResultCode(tElemIndex index, int errCode);
+static void setModbusNoResponse(tElemIndex index, int errCode);
 static void setModbusResponse(tElemIndex index, tSignal response);
 static void fillModbusRequest(tElemIndex index, tModbusReq *mbrequest);
 static void setModbusFloat(tElemIndex index, float data, float mul);
@@ -223,12 +225,15 @@ char *fbdChangeVarBuf;
 //  ChangeVar1
 //  ...
 //  ChangeVarN
+
 // флаги "значение изменилось", 1 бит для каждого элемента ELEM_OUT_MDBS (34)
 char *fbdChangeModbusBuf;
 //  ChangeModbus0
 //  ChangeModbus1
 //  ...
 //  ChangeModbusN
+// результаты операций чтения/запись для элементов Modbus (1 байт для каждого элемента ELEM_INP_MDBS и ELEM_OUT_MDBS)
+unsigned char *fbdModbusResultBuf;
 
 tOffset *inputOffsets;
 //  Смещение входа 0 элемента 0
@@ -268,8 +273,10 @@ tElemIndex fbdFlagsByteCount;
 tElemIndex fbdChangeVarByteCount;
 tElemIndex fbdChangeModbusByteCount;
 
-tElemIndex fbdModbusRTUCount;
-tElemIndex fbdModbusTCPCount;
+tElemIndex fbdModbusRTUCount;                       // количество элементов ModbusRTU
+tElemIndex fbdModbusTCPCount;                       // количество элементов ModbusTCP
+tElemIndex fbdModbusResCount;                       // общее количество элементов Modbus (размер буфера результатов)
+
 tElemIndex fbdModbusRTUIndex;
 tElemIndex fbdModbusTCPIndex;
 short      fbdModbusRTUTimer;
@@ -424,6 +431,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     fbdModbusTCPErrorCounter = 0;
     fbdModbusRTUCount = 0;
     fbdModbusTCPCount = 0;
+    fbdModbusResCount = 0;
 #ifdef USE_HMI
     fbdWpCount = 0;
     fbdSpCount = 0;
@@ -452,6 +460,10 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
                 break;
             case ELEM_OUT_MDBS:
                 fbdChangeModbusByteCount++;             // подсчёт элементов записи в Modbus
+                fbdModbusResCount++;
+                break;
+            case ELEM_INP_MDBS:                         // подсчёт элементов чтения Modbus
+                fbdModbusResCount++;
                 break;
 #ifdef USE_HMI
             case ELEM_WP:
@@ -465,9 +477,11 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         // общий подсчёт элементов
         fbdElementsCount++;
     }
+    //
     // проверка правильности флага завершения
     if(elem != END_MARK) return ERR_INVALID_SIZE_TYPE;
-    // расчет указателей
+    //
+    // расчёт указателей
     fbdInputsBuf = (DESCR_MEM tElemIndex DESCR_MEM_SUFX *)(fbdDescrBuf + fbdElementsCount + 1);
     fbdParametersBuf = (DESCR_MEM tSignal DESCR_MEM_SUFX *)(fbdInputsBuf + inputs);
     fbdGlobalOptionsCount = (DESCR_MEM unsigned char DESCR_MEM_SUFX *)(fbdParametersBuf + parameters);
@@ -482,6 +496,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
         if(fbdCRC32(fbdDescrBuf, FBD_SCHEMA_SIZE)) return ERR_INVALID_CHECK_SUM;
     }
 #ifdef USE_HMI
+    //
     // указатель на начало текстовых строк точек контроля и регулирования
     fbdCaptionsBuf = (DESCR_MEM char DESCR_MEM_SUFX *)(fbdGlobalOptions + *fbdGlobalOptionsCount);
     // после текстовых строк точек контроля и регулирования идут еще 3 строки: имя проекта, версия проекта, дата создания проекта
@@ -493,6 +508,7 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     for(i=0; i < (fbdWpCount + fbdSpCount + 3); i++) {
         while(*(curCap++));
     }
+    //
     // выравнивание curCap по границе 32 бита
     while((int)curCap % 4) curCap++;
     // ставим указатель на начало экранов
@@ -525,9 +541,9 @@ int fbdInit(DESCR_MEM unsigned char DESCR_MEM_SUFX *buf)
     fbdChangeModbusByteCount = (fbdChangeModbusByteCount>>3) + ((fbdChangeModbusByteCount&7)?1:0);
     //
 #ifdef USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset) + (fbdWpCount+fbdSpCount)*sizeof(tPointAccess) + fbdModbusResCount;
 #else  // USE_HMI
-    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset);
+    return (fbdElementsCount + fbdStorageCount)*sizeof(tSignal) + fbdFlagsByteCount + fbdChangeVarByteCount + fbdChangeModbusByteCount + fbdElementsCount*3*sizeof(tOffset) + fbdModbusResCount;
 #endif // USE_HMI
 }
 
@@ -566,17 +582,25 @@ void fbdSetMemory(char *buf, bool needReset)
     fbdModbusTCPCount = 0;
     //
     fbdMemoryBuf        = (tSignal *)buf;
+    // инициализация памяти (выходы элементов)
+    memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
+    //
     // инициализация указателей
     fbdStorageBuf       = fbdMemoryBuf + fbdElementsCount;
     fbdFlagsBuf         = (char *)(fbdStorageBuf + fbdStorageCount);
     fbdChangeVarBuf     = (char *)(fbdFlagsBuf + fbdFlagsByteCount);
     fbdChangeModbusBuf  = (char *)(fbdChangeVarBuf + fbdChangeVarByteCount);
-    // инициализация памяти (выходы элементов)
-    memset(fbdMemoryBuf, 0, sizeof(tSignal)*fbdElementsCount);
+    fbdModbusResultBuf  = (unsigned char *)(fbdChangeModbusBuf + fbdChangeModbusByteCount);
+    //
     // инициализация памяти (установка всех флагов изменения значения)
     fbdChangeAllNetVars();
+    //
     // установка всех флагов изменения значений записи в Modbus
     if(fbdChangeModbusByteCount > 0) memset(fbdChangeModbusBuf, 255, fbdChangeModbusByteCount);
+    //
+    // начальная установка результатов выполнения операций Modbus (0-успех)
+    if(fbdModbusResCount > 0) memset(fbdModbusResultBuf, 255, fbdModbusResCount);
+    //
     // восстановление значений триггеров из nvram
     for(i = 0; i < fbdStorageCount; i++) {
         if(needReset) {
@@ -587,7 +611,7 @@ void fbdSetMemory(char *buf, bool needReset)
         }
     }
     // инициализация буферов быстрого доступа
-    inputOffsets = (tOffset *)(fbdChangeModbusBuf + fbdChangeModbusByteCount);
+    inputOffsets = (tOffset *)(fbdModbusResultBuf + fbdModbusResCount);
     parameterOffsets = inputOffsets + fbdElementsCount;
     storageOffsets = parameterOffsets + fbdElementsCount;
     //
@@ -1238,7 +1262,7 @@ void fbdSetModbusRTUNoResponse(int errCode)
     fbdModbusRTUDelayTimer = FBD_MODBUSRTU_DELAY;
     if((errCode != 0) || (fbdModbusRTUErrorCounter == 0)) {
         fbdModbusRTUErrorCounter = 0;
-        setModbusNoResponse(fbdModbusRTUIndex);
+        setModbusNoResponse(fbdModbusRTUIndex, errCode);
     }
 }
 
@@ -1326,7 +1350,7 @@ void fbdSetModbusTCPNoResponse(int errCode)
 {
     if((errCode != 0) || (fbdModbusTCPErrorCounter == 0)) {
         fbdModbusTCPErrorCounter = 0;
-        setModbusNoResponse(fbdModbusTCPIndex);
+        setModbusNoResponse(fbdModbusTCPIndex, errCode);
     }
 }
 
@@ -1965,26 +1989,29 @@ void fbdCalcElement(tElemIndex curIndex)
                             // FBDGETPARAMETER(curIndex, 1)  - индекс события
                             v = FBDGETPARAMETER(curIndex, 1);
                             if(v < FBD_EVENTS_COUNT) {
-                                s1=(fbdEventActiveFlags[v>>3]&(1u<<(v&7)))?1:0;
+                                s1 = (fbdEventActiveFlags[v>>3]&(1u<<(v&7)))?1:0;
                             } else s1 = 0;
                             break;
-                        // case 11: результат чтения Modbus
-                        // case 12: результат записи Modbus
-
-
-// 00           Успех
-// 01  (0x01)   Illegal Function                        The function code is invalid or not allowed for the slave device.
-// 02  (0x02)   Illegal Data Address                    The requested data address range is not valid for the slave device.
-// 03  (0x03)   Illegal Data Value                      A value in the query's data field is unacceptable for the slave.
-// 04  (0x04)   Slave Device Failure                    An unrecoverable error, such as a hardware failure, occurred in the slave.
-// 05  (0x05)   Acknowledge                             The slave accepted the request but needs extended processing time. The master should poll later.
-// 06  (0x06)   Slave Device Busy                       The slave is processing a long command; the master should retry later.
-// 07  (0x07)   Negative Acknowledge                    The slave cannot perform the requested program function (used with program commands 13 or 14).
-// 08  (0x08)   Memory Parity Error                     The slave detected a parity error in extended memory while reading a record file (used with function codes 20 and 21).
-// 10  (0x0A)   Gateway Path Unavailable                The gateway could not allocate a communication path.
-// 11  (0x0B)   Gateway Target Device Failed to Respond No response was received from the target device through the gateway.
-// 255 (0xFF)   Другая ошибка (нет ответа, ошибка CRC, некорректный формат пакета и тп)
-
+                        case 11: 
+                            // результат чтения/записи Modbus
+                            // FBDGETPARAMETER(curIndex, 1)  - индекс результата
+                            v = FBDGETPARAMETER(curIndex, 1);
+                            if(v < fbdModbusResCount) s1 = fbdModbusResultBuf[v]; else s1 = -1;
+                            // 00  (0x00)   Успех
+                            // 01  (0x01)   Illegal Function                        The function code is invalid or not allowed for the slave device.
+                            // 02  (0x02)   Illegal Data Address                    The requested data address range is not valid for the slave device.
+                            // 03  (0x03)   Illegal Data Value                      A value in the query's data field is unacceptable for the slave.
+                            // 04  (0x04)   Slave Device Failure                    An unrecoverable error, such as a hardware failure, occurred in the slave.
+                            // 05  (0x05)   Acknowledge                             The slave accepted the request but needs extended processing time. The master should poll later.
+                            // 06  (0x06)   Slave Device Busy                       The slave is processing a long command; the master should retry later.
+                            // 07  (0x07)   Negative Acknowledge                    The slave cannot perform the requested program function (used with program commands 13 or 14).
+                            // 08  (0x08)   Memory Parity Error                     The slave detected a parity error in extended memory while reading a record file (used with function codes 20 and 21).
+                            // 10  (0x0A)   Gateway Path Unavailable                The gateway could not allocate a communication path.
+                            // 11  (0x0B)   Gateway Target Device Failed to Respond No response was received from the target device through the gateway.
+                            // 254 (0xFE)   Другая ошибка (нет ответа, ошибка CRC, некорректный формат пакета и тп)
+                            // 255 (0xFF)   Значение ещё не прочитано или не записано
+                            // -1           Некорректное значение индекса
+                            break;
                         default:
                             s1 = 0;
                             break;
@@ -2364,12 +2391,36 @@ static bool getAndClearChangeModbusFlag(tElemIndex index)
 }
 
 /**
+ * @brief Установка статуса обмена по Modbus
+ * 
+ * @param index Индекс элемента Modbus в общем списке элементов схемы
+ * @param errCode -1-успех, 0-устранимая ошибка, другое-код исключения
+ */
+static void setModbusResultCode(tElemIndex index, int errCode)
+{
+    tElemIndex mdbs_idx = 0;
+    while(index--) {
+        unsigned char elem = fbdDescrBuf[index] & ELEMMASK;
+        if((elem == ELEM_OUT_MDBS) || (elem == ELEM_INP_MDBS)) mdbs_idx++;
+    }
+    // проверка на выход за границы буфера
+    if(mdbs_idx >= fbdModbusResCount) return;
+    //
+    if(errCode == -1) fbdModbusResultBuf[mdbs_idx] = 0; else
+        if(errCode == 0) fbdModbusResultBuf[mdbs_idx] = 254; else
+            fbdModbusResultBuf[mdbs_idx] = errCode;
+}
+
+/**
  * @brief Установка признака "нет ответа" для элемента чтения или записи Modbus
  * @param index Индекс элемента чтения или записи Modbus
  */
-static void setModbusNoResponse(tElemIndex index)
+static void setModbusNoResponse(tElemIndex index, int errCode)
 {
     if(index == MAX_INDEX) return;
+    //
+    // устанавливаем код ошибки в fbdModbusResultBuf
+    setModbusResultCode(index, errCode);
     //
     switch (fbdDescrBuf[index] & ELEMMASK) {
         case ELEM_INP_MDBS:
@@ -2397,6 +2448,10 @@ static void setModbusResponse(tElemIndex index, tSignal response)
     unsigned char fmtcnt;
     //
     if(index == MAX_INDEX) return;
+    //
+    // сбрасываем код ошибки в fbdModbusResultBuf
+    setModbusResultCode(index, -1);
+    //
     // если это не элемент чтения Modbus, то ничего не далаем
     // для элементов записи Modbus флаг изменений сбрасывается при формировании запроса
     if((fbdDescrBuf[index] & ELEMMASK) != ELEM_INP_MDBS) return;
