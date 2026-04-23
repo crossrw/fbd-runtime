@@ -1,6 +1,5 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/crossrw/fbd-runtime.svg)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/crossrw/fbd-runtime.svg)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/719831e80f6f4a609722804dac73bd09)](https://www.codacy.com/app/crossrw/fbd-runtime?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=crossrw/fbd-runtime&amp;utm_campaign=Badge_Grade)
 ![GitHub](https://img.shields.io/github/license/crossrw/fbd-runtime.svg)
 
 # FBD-runtime
@@ -17,7 +16,7 @@ FBD - один из языков программирования описанн
 
 На YoTube создан [плейлист](https://www.youtube.com/playlist?list=PL-NR9fQZQS9kNCQq-ceBZPDU_Iv5p9PwC), посвященный контроллеру САТ-500, использующем библиотеку.
 
-Библиотека использована при разработке универсального контроллера САТ-500, подробная информация о контроллере на доступна на сайте [www.sat500.ru](https://www.sat500.ru).
+Библиотека использована при разработке универсального контроллера САТ-500, подробная информация о контроллере на доступна на сайте [saturn-plc.ru](https://saturn-plc.ru/).
 
 ## Оглавление
 
